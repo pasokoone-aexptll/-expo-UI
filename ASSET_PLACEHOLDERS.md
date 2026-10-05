@@ -9,7 +9,6 @@
 | 素材 | 差し替え先 |
 | --- | --- |
 | 電信結界 / DreamCloudのヘッダーロゴ | `src/components/app-header.tsx` のwordmark |
-| 非常口アイコン | `src/components/app-header.tsx` のexitIcon、`src/features/map-scene.tsx` のexitPlaceholder |
 | ヘッダーのプロフィール写真 | `src/components/app-header.tsx` のavatar |
 
 マップ中央のブランドロゴは後の指示で廃止済み。SF Symbolsを使う戻る・現在地・システムログインアイコンの画像提供は不要。
@@ -31,3 +30,7 @@
 | `src/components/rain-cloud.tsx` | 提供cloud.svg由来の雲と独立した3列の雨ドット |
 
 旧資料にあった `cloud-logo.png` と `mono-dream.png` の一枚絵は現在のアニメーション構成では使わない。文字・雲・ドットを分離している。プロフィール中央は提供済みデモステッカーを使う。
+
+## Exit icon update (2026-10-06)
+
+`assets/images/header/exit.png` is supplied and used by `src/components/exit-button.tsx` in both the header and map. It calls `useSession().logout()`; it is gray and disabled when logged out.

@@ -37,7 +37,7 @@
 
 | hook | 入力 → 出力 | UIの呼び出し箇所・操作 |
 | --- | --- | --- |
-| `useSession()` | → `status: idle/detecting/success`, `profile: Profile|null`, `onlineSeconds`, `ghostSeconds`, `ghost`, `setGhost(boolean)`, `simulateLogin()`, `reset()` | CardStack→ProfileCard/ScannerCard。MapSceneの時間とトグル。DevPanelの擬似ログイン／リセット |
+| `useSession()` | → `status: idle/detecting/success`, `profile: Profile|null`, `onlineSeconds`, `ghostSeconds`, `ghost`, `setGhost(boolean)`, `simulateLogin()`, `logout()`, `reset()` | CardStack→ProfileCard/ScannerCard。MapSceneの時間とトグル。DevPanelの擬似ログイン／リセット |
 | `useScan()` | → `status: idle/scanning/done`, `found: FoundUser[]`, `ready: boolean`, `start()`, `reset()` | CardStackが所有。ScannerCardへpropsで渡し、完了後はルートの遷移コールバック |
 | `useArea(areaId)` | `kabukicho/ikebukuro/akihabara` → `id,name,headcount,center,zones[]` | MapScene→AreaMap。画面のエリア選択UIは廃止済み |
 | `useChat(areaId)` | → `messages: ChatMessage[]`, `send(text:string):void` | MapSceneが送信、MapChatが表示 |
@@ -156,3 +156,7 @@ Expo Goで `npx expo start` を起動し、以下を確認する。
 5. 入力時に背景のぼかし・色と入力欄が一緒に上がる。送信で末尾へ追加される。
 6. 文字行を掴むと履歴が上へ開き、離すと元の窓に戻る。余白は地図へタップ透過する。最古のチャットを下まで引いても通常の窓に残る。
 7. アプリを再起動すると最後のカードを復元する。iOSネイティブビルドでは斜め視点のまま建物が平坦になることも確認する。
+
+## Logout update (2026-10-06)
+
+The exit icon is now supplied: `assets/images/header/exit.png`. `ExitButton` calls `useSession().logout()` from both screens. The mock provider clears profile, session, online time and ghost state immediately. The map stays open without its online status or ghost button. ProfileCard animates success to idle with a 460ms reverse flip; its display snapshot survives only until the flip completes. Scan readiness is independent of authentication. Replace the hook implementation for real logout; no network is called here.
