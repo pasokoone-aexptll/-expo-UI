@@ -37,19 +37,20 @@ function Pin({ person, zone, compact, zoomScale, onMention }: { person?: MapPers
 }
 export const AreaMap = forwardRef<MapView, Props>(function AreaMap({ area, onReady, onMention, onMapPress, onMapLongPress, onMoving }, ref) {
   const zoomScale = useSharedValue(1);
-  const baseline = useSharedValue(0);
   const [compact, setCompact] = useState(false);
   useEffect(() => setCompact(false), [area.id]);
   // ASSUMED: 約500m以上の表示範囲では人名を省き、電信IDは末尾だけにする。
   function updateDetail(region: Region) { setCompact(current => region.latitudeDelta > (current ? 0.004 : 0.005)); }
+  function updateScale(region: Region, animated: boolean) {
+    // 固定の表示範囲を基準にする。最初のイベント値は初期カメラ遷移で変わるため使わない。
+    const span = Math.max(0.00001, region.latitudeDelta) / 0.002;
+    const size = 0.1 + 1.15 / (1 + span);
+    zoomScale.value = animated ? withTiming(size, { duration: 90 }) : size;
+  }
   return <MapView ref={ref} onMapReady={onReady} onRegionChange={region => {
       onMoving(true);
-      if (!baseline.value) baseline.value = region.latitudeDelta;
-      const visibleSpan = Math.max(0.00001, region.latitudeDelta) / baseline.value;
-      // ASSUMED: 基準サイズ1。表示範囲への反比例カーブで、広域は0.18へ、詳細は1.82へ滑らかに近づく。
-      // 人の点・名前も同じ倍率を使い、広域で大きな表示が残らないようにする。
-      zoomScale.value = withTiming(0.18 + 1.64 / (1 + visibleSpan), { duration: 90 });
-    }} onRegionChangeComplete={region => { updateDetail(region); onMoving(false); }} onPress={onMapPress} onLongPress={onMapLongPress} style={StyleSheet.absoluteFill} initialCamera={{ center: area.center, pitch: 45, heading: -25, altitude: 650, zoom: 17 }} mapType="mutedStandard" userInterfaceStyle="light" showsPointsOfInterests={false} showsBuildings={false} showsCompass={false} showsScale={false} showsUserLocation={false}>
+      updateScale(region, true);
+    }} onRegionChangeComplete={region => { updateScale(region, false); updateDetail(region); onMoving(false); }} onPress={onMapPress} onLongPress={onMapLongPress} style={StyleSheet.absoluteFill} initialCamera={{ center: area.center, pitch: 45, heading: -25, altitude: 650, zoom: 17 }} mapType="mutedStandard" userInterfaceStyle="light" showsPointsOfInterests={false} showsBuildings={false} showsCompass={false} showsScale={false} showsUserLocation={false}>
     {area.zones.map(zone => <Polygon key={zone.key} coordinates={zone.boundary} fillColor={`${zone.color}35`} strokeColor={zone.color} strokeWidth={1} />)}
     {area.zones.flatMap(zone => zone.people.map(person => <Pin key={person.id} person={person} zone={zone} compact={compact} zoomScale={zoomScale} onMention={onMention} />))}
     {area.zones.map(zone => <Pin key={zone.key} zone={zone} compact={compact} zoomScale={zoomScale} onMention={onMention} />)}

@@ -1,3 +1,4 @@
+import MaskedView from '@react-native-masked-view/masked-view';
 import { AssetPlaceholder } from '@/components/asset-placeholder';
 import { AreaMap, type MapPerson } from '@/features/area-map';
 import { MapChat } from '@/features/map-chat';
@@ -43,6 +44,7 @@ export function MapScene({ onBack }: { onBack: () => void }) {
     return () => frame.remove();
   }, [windowHeight, keyboardHeight, keyboardOpen]);
   const bottomStyle = useAnimatedStyle(() => ({ bottom: keyboardHeight.value, paddingHorizontal: interpolate(keyboardOpen.value, [0, 1], [27, 12]), paddingBottom: interpolate(keyboardOpen.value, [0, 1], [Math.max(8, insets.bottom - 4), 8]) }));
+  const restingBlur = useAnimatedStyle(() => ({ opacity: (1 - mapMoving.value) * (1 - chatFocus.value) }));
   const focusStyle = useAnimatedStyle(() => ({ opacity: chatFocus.value }));
   const mutedStyle = useAnimatedStyle(() => ({ opacity: 1 - chatFocus.value * 0.85 }));
   const chatOpacity = useAnimatedStyle(() => ({ opacity: interpolate(chatFocus.value, [0, 1], [interpolate(mapMoving.value, [0, 1], [0.78, 0.22]), 1]) }));
@@ -82,6 +84,9 @@ export function MapScene({ onBack }: { onBack: () => void }) {
   const elapsed = `${String(Math.floor(elapsedSeconds / 60)).padStart(2, '0')}:${String(elapsedSeconds % 60).padStart(2, '0')}`;
   return <View style={styles.scene}>
     <AreaMap ref={map} area={area} onMoving={setMapMoving} onMention={offerMention} onMapLongPress={mapLongPress} onMapPress={() => { setMention(null); Keyboard.dismiss(); }} onReady={() => { map.current?.setNativeProps({ showsBuildings: false }); }} />
+    <Animated.View pointerEvents="none" style={[styles.readingBlur, { height: windowHeight * 0.45 + 100 }, restingBlur]}>
+      <MaskedView style={StyleSheet.absoluteFill} maskElement={<LinearGradient colors={['transparent', '#000000']} locations={[0, 1]} style={StyleSheet.absoluteFill} />}><BlurView intensity={70} tint="light" style={StyleSheet.absoluteFill} /></MaskedView>
+    </Animated.View>
     <LinearGradient pointerEvents="none" colors={['#EEEFE9', '#EEEFE9F0', '#EEEFE900']} locations={[0, 0.58, 1]} style={[styles.topVeil, { height: insets.top + 160 }]} />
     <Animated.View entering={FadeIn.duration(450)} style={[styles.header, { top: insets.top + 8 }]}>
       <Pressable accessibilityRole="button" accessibilityLabel="スキャナーに戻る" onPress={onBack} style={styles.headerButton}><SymbolView name="chevron.left" tintColor="#555753" size={26} weight="medium" /></Pressable>
@@ -92,7 +97,7 @@ export function MapScene({ onBack }: { onBack: () => void }) {
     <Pressable accessibilityRole="button" accessibilityLabel="現在地に戻る（モック）" onPress={() => { setAreaId('kabukicho'); move(MOCK_LOCATION); }} style={[styles.locationButton, { position: 'absolute', right: 20, top: insets.top + 64 }]}><SymbolView name="location.fill" size={23} tintColor="#101010" /></Pressable>
     <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, focusStyle]}><BlurView intensity={65} tint="light" style={StyleSheet.absoluteFill} /></Animated.View>
     <Animated.View pointerEvents="box-none" style={[styles.bottom, bottomStyle]}>
-      <Animated.View pointerEvents="box-none" entering={FadeIn.delay(250).duration(500)} style={[styles.chat, chatOpacity]}><MapChat key={areaId} messages={messages} onScrolling={setChatScrolling} /></Animated.View>
+      <Animated.View pointerEvents="box-none" entering={FadeIn.delay(250).duration(500)} style={[styles.chat, { height: windowHeight * 0.45 }, chatOpacity]}><MapChat key={areaId} messages={messages} onScrolling={setChatScrolling} /></Animated.View>
       {mention && <View style={styles.mentionPrompt}><Text style={styles.mentionText}>このユーザーにメンション付きでチャットしますか？</Text><Pressable accessibilityRole="button" onPress={insertMention} style={styles.mentionButton}><Text style={styles.mentionButtonText}>@付きチャット</Text></Pressable></View>}
       <Animated.View entering={FadeInDown.delay(180).duration(400)} style={[styles.composer, mutedStyle]}>
         <TextInput ref={inputRef} accessibilityLabel="チャットメッセージ" placeholder="入力…" placeholderTextColor="#A5A5A5" value={draft} onChangeText={setDraft} onSubmitEditing={submit} returnKeyType="send" blurOnSubmit={false} style={styles.input} />
@@ -105,6 +110,7 @@ export function MapScene({ onBack }: { onBack: () => void }) {
 const styles = StyleSheet.create({
   mentionPrompt: { backgroundColor: '#FFFFFFEE', borderRadius: 32, borderCurve: 'continuous', padding: 14, marginBottom: 10, gap: 12, flexDirection: 'row', alignItems: 'center' }, mentionText: { flex: 1, color: '#888888', fontSize: 12, lineHeight: 19 }, mentionButton: { backgroundColor: '#168EFF', paddingHorizontal: 16, paddingVertical: 12, borderRadius: 24, borderCurve: 'continuous', alignItems: 'center' }, mentionButtonText: { color: '#FFFFFF', fontWeight: '700' },
   areaPill: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: '#FFFFFF', borderRadius: 25, borderCurve: 'continuous', paddingHorizontal: 19, height: 46 }, areaTitle: { fontSize: 17, color: '#111111', fontWeight: '700', marginRight: 3 }, areaCount: { fontSize: 16, color: '#111111' }, statusLine: { position: 'absolute', left: 70, right: 70, alignItems: 'center' },
+  readingBlur: { position: 'absolute', bottom: 0, left: 0, right: 0 },
   scene: { flex: 1, backgroundColor: '#E9EAE5' }, topVeil: { position: 'absolute', top: 0, left: 0, right: 0 },
   header: { position: 'absolute', left: 16, right: 16, height: 50, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }, headerButton: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }, brand: { alignItems: 'center' }, wordmark: { width: 128, height: 40, borderRadius: 4, borderCurve: 'continuous' }, exitPlaceholder: { width: 33, height: 33, borderRadius: 3, borderCurve: 'continuous' }, brandText: { color: '#000000', fontSize: 16, fontWeight: '900', marginTop: -3 },
   areaRow: { position: 'absolute', left: 16, right: 16, flexDirection: 'row', gap: 6, height: 46 }, areaScroll: { flex: 1, backgroundColor: '#FFFFFF', borderRadius: 25, borderCurve: 'continuous' }, areaTabs: { padding: 5, gap: 3 }, areaTab: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, gap: 4, borderRadius: 22, borderCurve: 'continuous' }, activeArea: { backgroundColor: '#008FFF' }, areaName: { color: '#777777', fontSize: 16, fontWeight: '600', marginRight: 3 }, count: { color: '#777777', fontSize: 15 }, activeText: { color: '#FFFFFF' }, locationButton: { width: 46, height: 46, backgroundColor: '#FFFFFF', borderRadius: 23, borderCurve: 'continuous', alignItems: 'center', justifyContent: 'center' },
