@@ -124,7 +124,7 @@ export function MapScene({ onBack }: { onBack: () => void }) {
       <Animated.View pointerEvents={keyboardVisible ? 'none' : 'box-none'} entering={FadeIn.delay(250).duration(500)} style={[styles.chat, { height: fullChatHeight }, chatOpacity]}>
         <Animated.View pointerEvents="box-none" style={[styles.chatClip, chatReveal]}>
           <MaskedView pointerEvents="box-none" style={StyleSheet.absoluteFill} maskElement={<LinearGradient colors={['transparent', '#000000', '#000000']} locations={[0, 0.14, 1]} style={StyleSheet.absoluteFill} />}>
-            <View pointerEvents="box-none" style={[styles.chatContent, { height: fullChatHeight }]}>
+            <View pointerEvents="box-none" style={[styles.chatContent, { height: windowHeight }]}>
               <MapChat key={areaId} topSpacing={windowHeight * 0.8} messages={messages} onScrolling={setChatScrolling} />
             </View>
           </MaskedView>
