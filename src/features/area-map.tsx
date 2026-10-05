@@ -18,7 +18,7 @@ function Pin({ person, zone, compact, zoomScale, onMention }: { person?: MapPers
   const frameHeight = isPerson ? 110 : 210;
   const anchorY = isPerson ? 100 : 210;
   const animated = useAnimatedStyle(() => {
-    const zoom = isPerson ? Math.max(0.9, Math.min(1.35, zoomScale.value)) : zoomScale.value;
+    const zoom = zoomScale.value;
     const size = scale.value * zoom;
     return { transform: [{ translateY: (1 - size) * (anchorY - frameHeight / 2) }, { scale: size }] };
   });
@@ -45,8 +45,10 @@ export const AreaMap = forwardRef<MapView, Props>(function AreaMap({ area, onRea
   return <MapView ref={ref} onMapReady={onReady} onRegionChange={region => {
       onMoving(true);
       if (!baseline.value) baseline.value = region.latitudeDelta;
-      const ratio = baseline.value / Math.max(0.00001, region.latitudeDelta);
-      zoomScale.value = withTiming(Math.max(0.6, Math.min(1.65, ratio)), { duration: 90 });
+      const visibleSpan = Math.max(0.00001, region.latitudeDelta) / baseline.value;
+      // ASSUMED: 基準サイズ1。表示範囲への反比例カーブで、広域は0.18へ、詳細は1.82へ滑らかに近づく。
+      // 人の点・名前も同じ倍率を使い、広域で大きな表示が残らないようにする。
+      zoomScale.value = withTiming(0.18 + 1.64 / (1 + visibleSpan), { duration: 90 });
     }} onRegionChangeComplete={region => { updateDetail(region); onMoving(false); }} onPress={onMapPress} onLongPress={onMapLongPress} style={StyleSheet.absoluteFill} initialCamera={{ center: area.center, pitch: 45, heading: -25, altitude: 650, zoom: 17 }} mapType="mutedStandard" userInterfaceStyle="light" showsPointsOfInterests={false} showsBuildings={false} showsCompass={false} showsScale={false} showsUserLocation={false}>
     {area.zones.map(zone => <Polygon key={zone.key} coordinates={zone.boundary} fillColor={`${zone.color}35`} strokeColor={zone.color} strokeWidth={1} />)}
     {area.zones.flatMap(zone => zone.people.map(person => <Pin key={person.id} person={person} zone={zone} compact={compact} zoomScale={zoomScale} onMention={onMention} />))}

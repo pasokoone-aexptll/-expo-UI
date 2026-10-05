@@ -45,7 +45,7 @@ export function MapScene({ onBack }: { onBack: () => void }) {
   const bottomStyle = useAnimatedStyle(() => ({ bottom: keyboardHeight.value, paddingHorizontal: interpolate(keyboardOpen.value, [0, 1], [27, 12]), paddingBottom: interpolate(keyboardOpen.value, [0, 1], [Math.max(8, insets.bottom - 4), 8]) }));
   const focusStyle = useAnimatedStyle(() => ({ opacity: chatFocus.value }));
   const mutedStyle = useAnimatedStyle(() => ({ opacity: 1 - chatFocus.value * 0.85 }));
-  const chatOpacity = useAnimatedStyle(() => ({ opacity: interpolate(mapMoving.value, [0, 1], [0.78, 1]) }));
+  const chatOpacity = useAnimatedStyle(() => ({ opacity: interpolate(chatFocus.value, [0, 1], [interpolate(mapMoving.value, [0, 1], [0.78, 0.22]), 1]) }));
   function setChatScrolling(active: boolean) { chatFocus.value = withTiming(active ? 1 : 0, { duration: 180 }); }
   function setMapMoving(active: boolean) { mapMoving.value = withTiming(active ? 1 : 0, { duration: 150 }); }
   const map = useRef<MapView>(null);
