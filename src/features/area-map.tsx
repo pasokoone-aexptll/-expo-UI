@@ -1,27 +1,47 @@
 import { Image } from 'expo-image';
-import { forwardRef } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
-import MapView, { Marker, Polygon } from 'react-native-maps';
+import { forwardRef, useEffect, useState } from 'react';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import MapView, { Marker, Polygon, type Region, type LongPressEvent } from 'react-native-maps';
+import Animated, { useAnimatedStyle, useSharedValue, withSequence, withTiming } from 'react-native-reanimated';
 import { PeopleCount } from '@/components/people-count';
+import { GradientText } from '@/components/gradient-text';
+import { MapBubble } from '@/components/map-bubble';
 import type { getMapArea } from '@/mocks/map-data';
+import type { Coordinate } from '@/types';
 
-type Props = { area: ReturnType<typeof getMapArea> };
-export const AreaMap = forwardRef<MapView, Props>(function AreaMap({ area }, ref) {
-  return <MapView ref={ref} style={StyleSheet.absoluteFill} initialCamera={{ center: area.center, pitch: 45, heading: -25, altitude: 650, zoom: 17 }} userInterfaceStyle="light" showsPointsOfInterests={false} showsBuildings={false} showsCompass={false} showsScale={false} showsUserLocation={false}>
+export type MapPerson = { id: string; label: string; coordinate: Coordinate };
+type Props = { area: ReturnType<typeof getMapArea>; onReady: () => void; onMention: (person: MapPerson) => void; onMapPress: () => void; onMapLongPress: (event: LongPressEvent) => void };
+function Pin({ person, zone, compact, onMention }: { person?: MapPerson; zone: ReturnType<typeof getMapArea>['zones'][number]; compact: boolean; onMention: Props['onMention'] }) {
+  const scale = useSharedValue(1);
+  const isPerson = !!person;
+  // 固定フレーム: 点の中心(y=73) / ステッカー下端(y=150)を地理座標に固定。
+  const frameHeight = isPerson ? 80 : 150;
+  const anchorY = isPerson ? 73 : 150;
+  const animated = useAnimatedStyle(() => ({ transform: [{ translateY: (1 - scale.value) * (anchorY - frameHeight / 2) }, { scale: scale.value }] }));
+  function pulse() { scale.value = withSequence(withTiming(1.12, { duration: 140 }), withTiming(1, { duration: 200 })); }
+  return <Marker coordinate={person?.coordinate ?? zone.coordinate} centerOffset={{ x: 0, y: frameHeight / 2 - anchorY }} anchor={{ x: 0.5, y: anchorY / frameHeight }} stopPropagation onPress={pulse}>
+    <Pressable accessible accessibilityLabel={person ? `${person.label}。長押しでメンション` : `電信ID ${zone.electricId}`} onPress={pulse} onLongPress={person ? () => onMention(person) : undefined} delayLongPress={500} style={{ width: 126, height: frameHeight }}>
+      <Animated.View style={[styles.pin, { height: frameHeight }, animated]}>
+        {person ? <><View style={styles.personBubble}>{!compact && <MapBubble><GradientText color={zone.color} style={styles.personText}>{person.label}</GradientText></MapBubble>}</View><View style={[styles.dot, { backgroundColor: zone.color }]} /></> : <>
+          <View style={[styles.stickerBubble, compact && { bottom: 60 }]}><MapBubble><View>{!compact && <Text style={styles.label}>電信ID</Text>}<GradientText color={zone.color} style={styles.id}>{compact ? `…${zone.electricId.slice(-2)}` : zone.electricId}</GradientText></View><PeopleCount count={zone.headcount} color={zone.color} /></MapBubble></View>
+          <Image source={zone.sticker} style={[styles.sticker, compact && styles.compactSticker]} contentFit="contain" contentPosition="bottom" />
+        </>}
+      </Animated.View>
+    </Pressable>
+  </Marker>;
+}
+export const AreaMap = forwardRef<MapView, Props>(function AreaMap({ area, onReady, onMention, onMapPress, onMapLongPress }, ref) {
+  const [compact, setCompact] = useState(false);
+  useEffect(() => setCompact(false), [area.id]);
+  // ASSUMED: 約500m以上の表示範囲では人名を省き、電信IDは末尾だけにする。
+  function updateDetail(region: Region) { setCompact(current => region.latitudeDelta > (current ? 0.004 : 0.005)); }
+  return <MapView ref={ref} onMapReady={onReady} onRegionChangeComplete={updateDetail} onPress={onMapPress} onLongPress={onMapLongPress} style={StyleSheet.absoluteFill} initialCamera={{ center: area.center, pitch: 45, heading: -25, altitude: 650, zoom: 17 }} mapType="mutedStandard" userInterfaceStyle="light" showsPointsOfInterests={false} showsBuildings={false} showsCompass={false} showsScale={false} showsUserLocation={false}>
     {area.zones.map(zone => <Polygon key={zone.key} coordinates={zone.boundary} fillColor={`${zone.color}35`} strokeColor={zone.color} strokeWidth={1} />)}
-    {area.zones.flatMap(zone => zone.people.map(person => <Marker key={person.id} coordinate={person.coordinate} anchor={{ x: 0.5, y: 1 }} tracksViewChanges={false}>
-      <View style={styles.person}><View style={styles.personLabel}><Text style={[styles.personText, { color: zone.color }]}>{person.label}</Text></View><View style={styles.tail} /><View style={[styles.dot, { backgroundColor: zone.color }]} /></View>
-    </Marker>))}
-    {area.zones.map(zone => <Marker key={zone.key} coordinate={zone.coordinate} anchor={{ x: 0.5, y: 0.7 }}>
-      <View style={styles.stickerMarker}><View style={styles.bubble}><View><Text style={styles.label}>電信ID</Text><Text style={[styles.id, { color: zone.color }]}>{zone.electricId}</Text></View><PeopleCount count={zone.headcount} color={zone.color} /></View><View style={styles.tail} />
-        {zone.sticker ? <Image source={zone.sticker} style={styles.sticker} contentFit="contain" /> : <View style={[styles.sticker, styles.placeholder]} />}
-      </View>
-    </Marker>)}
+    {area.zones.flatMap(zone => zone.people.map(person => <Pin key={person.id} person={person} zone={zone} compact={compact} onMention={onMention} />))}
+    {area.zones.map(zone => <Pin key={zone.key} zone={zone} compact={compact} onMention={onMention} />)}
   </MapView>;
 });
 const styles = StyleSheet.create({
-  person: { alignItems: 'center', padding: 3 }, personLabel: { backgroundColor: '#FFFFFF', borderRadius: 18, paddingHorizontal: 8, paddingVertical: 4 }, personText: { fontSize: 13 },
-  tail: { width: 0, height: 0, borderLeftWidth: 7, borderRightWidth: 7, borderTopWidth: 8, borderLeftColor: 'transparent', borderRightColor: 'transparent', borderTopColor: '#FFFFFF', alignSelf: 'center' },
-  dot: { width: 10, height: 10, borderRadius: 5, borderWidth: 2, borderColor: '#FFFFFF', marginTop: 3 },
-  stickerMarker: { alignItems: 'center', width: 110 }, bubble: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFFFFFDD', borderRadius: 20, paddingHorizontal: 9, paddingVertical: 4, gap: 3 }, label: { color: '#AAAAAA', fontSize: 9 }, id: { fontSize: 16, fontWeight: '800', fontFamily: 'ui-rounded' }, sticker: { width: 76, height: 76 }, placeholder: { backgroundColor: '#D1D1D1', borderRadius: 14 },
+  pin: { width: 126, alignItems: 'center' }, personBubble: { position: 'absolute', bottom: 14 }, personText: { fontSize: 13 }, dot: { position: 'absolute', bottom: 2, width: 10, height: 10, borderRadius: 5, borderWidth: 2, borderColor: '#FFFFFF' },
+  stickerBubble: { position: 'absolute', bottom: 80 }, label: { color: '#888888', fontSize: 9 }, id: { fontSize: 16, fontWeight: '800', fontFamily: 'ui-rounded' }, sticker: { position: 'absolute', bottom: 0, width: 80, height: 80 }, compactSticker: { width: 60, height: 60 },
 });
