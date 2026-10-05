@@ -9,6 +9,14 @@ import { MapBubble } from '@/components/map-bubble';
 import type { getMapArea } from '@/mocks/map-data';
 import type { Coordinate } from '@/types';
 
+// ピンのズーム曲線はここで調整（点・名前・ステッカー共通）。
+const PIN_ZOOM_CURVE = {
+  minScale: 0.28,       // 広域表示で近づく最小倍率
+  maxScale: 1.4,        // 詳細表示で近づく最大倍率
+  referenceSpan: 0.0025, // この緯度幅で最小・最大の中間倍率になる
+  exponent: 0.8,       // 小さくするほど中間付近の変化が緩やか（正の値）
+};
+
 export type MapPerson = { id: string; label: string; coordinate: Coordinate };
 type Props = { area: ReturnType<typeof getMapArea>; onReady: () => void; onMention: (person: MapPerson) => void; onMapPress: () => void; onMapLongPress: (event: LongPressEvent) => void; onMoving: (active: boolean) => void };
 function Pin({ person, zone, compact, zoomScale, onMention }: { person?: MapPerson; zone: ReturnType<typeof getMapArea>['zones'][number]; compact: boolean; zoomScale: SharedValue<number>; onMention: Props['onMention'] }) {
@@ -43,8 +51,9 @@ export const AreaMap = forwardRef<MapView, Props>(function AreaMap({ area, onRea
   function updateDetail(region: Region) { setCompact(current => region.latitudeDelta > (current ? 0.004 : 0.005)); }
   function updateScale(region: Region, animated: boolean) {
     // 固定の表示範囲を基準にする。最初のイベント値は初期カメラ遷移で変わるため使わない。
-    const span = Math.max(0.00001, region.latitudeDelta) / 0.002;
-    const size = 0.1 + 1.15 / (1 + span);
+    const { minScale, maxScale, referenceSpan, exponent } = PIN_ZOOM_CURVE;
+    const span = Math.max(0.00001, region.latitudeDelta) / referenceSpan;
+    const size = minScale + (maxScale - minScale) / (1 + Math.pow(span, exponent));
     zoomScale.value = animated ? withTiming(size, { duration: 90 }) : size;
   }
   return <MapView ref={ref} onMapReady={onReady} onRegionChange={region => {
