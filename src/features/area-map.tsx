@@ -1,3 +1,4 @@
+import { RoundedText as Text } from '@/components/rounded-text';
 import { GradientText } from '@/components/gradient-text';
 import { MapBubble } from '@/components/map-bubble';
 import { PeopleCount } from '@/components/people-count';
@@ -6,7 +7,7 @@ import type { Coordinate } from '@/types';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { forwardRef, useEffect, useState, useRef, useImperativeHandle } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import MapView, { Marker, Polygon, type LongPressEvent, type Region } from 'react-native-maps';
 import Animated, { cancelAnimation, useAnimatedStyle, useSharedValue, withDelay, withTiming, type SharedValue } from 'react-native-reanimated';
 

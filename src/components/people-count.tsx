@@ -1,8 +1,9 @@
+import { paleTextColor } from '@/components/gradient-text';
 import MaskedView from '@react-native-masked-view/masked-view';
 import { SymbolView } from 'expo-symbols';
 import { useId } from 'react';
 import { StyleSheet, View } from 'react-native';
-import Svg, { Defs, Mask, Rect, Text as SvgText } from 'react-native-svg';
+import Svg, { Defs, LinearGradient, Stop, Mask, Rect, Text as SvgText } from 'react-native-svg';
 
 export function PeopleCount({ count, color }: { count: number; color: string }) {
   const maskId = useId().replace(/:/g, '');
@@ -24,7 +25,8 @@ export function PeopleCount({ count, color }: { count: number; color: string }) 
         <SymbolView name="person.crop.circle.fill" tintColor={color} size={31} />
       </MaskedView>
       <Svg pointerEvents="none" width={width} height={34} style={StyleSheet.absoluteFill}>
-        <SvgText {...number} fill={color}>{count}</SvgText>
+        <Defs><LinearGradient id={`${maskId}color`} x1="0" y1="0" x2="0" y2="1"><Stop offset="0" stopColor={color} /><Stop offset="1" stopColor={paleTextColor(color)} /></LinearGradient></Defs>
+        <SvgText {...number} fill={`url(#${maskId}color)`}>{count}</SvgText>
       </Svg>
     </View>
   );

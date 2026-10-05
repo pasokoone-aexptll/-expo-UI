@@ -1,10 +1,12 @@
+import { NumberText } from '@/components/number-text';
+import { RoundedText as Text } from '@/components/rounded-text';
 import { CardHandle } from '@/components/card-handle';
 import MaskedView from '@react-native-masked-view/masked-view';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SymbolView } from 'expo-symbols';
 import { useEffect, useRef } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import Animated, { cancelAnimation, createAnimatedComponent, Easing, useAnimatedProps, useAnimatedStyle, useSharedValue, withDelay, withRepeat, withTiming } from 'react-native-reanimated';
 import Svg, { Circle, Path } from 'react-native-svg';
 
@@ -119,12 +121,12 @@ export function ProfileCard({ cardWidth, cardHeight, status, profile, onlineSeco
           <Image source={require('@/assets/images/login/demo-sticker.png')} contentFit="contain" style={StyleSheet.absoluteFill} />
           <View style={styles.stickerCount}><PeopleCount count={profile?.headcount ?? 0} color="#454545" /></View>
         </View>
-        <View style={styles.onlinePill}><View style={styles.onlineDot} /><Text style={styles.onlineText}>{ghost ? 'ゴースト' : 'オンライン'} {minutes}:{seconds}</Text></View>
+        <View style={styles.onlinePill}><View style={styles.onlineDot} /><NumberText color="#25B278" style={styles.onlineText}>{`${ghost ? 'ゴースト' : 'オンライン'} ${minutes}:${seconds}`}</NumberText></View>
         </View>
         <View style={styles.footer}>
           <Image source={require('@/assets/images/login/tokyo-city-background.png')} contentFit="cover" style={StyleSheet.absoluteFill} />
           <LinearGradient colors={['#00000035', '#000000A0']} style={StyleSheet.absoluteFill} />
-          <Text style={styles.visitText}>過去に{profile?.visitCount ?? 0}回、{electricId}電信結界に入りました</Text>
+          <NumberText color="#E6E6E6" style={styles.visitText}>{`過去に${profile?.visitCount ?? 0}回、${electricId}電信結界に入りました`}</NumberText>
           <View style={styles.customizeRow}><Text style={styles.customizeText}>電信結界プロファイルでカスタマイズしましょう</Text><SymbolView name="chevron.right" tintColor="#E6E6E6" size={12} /></View>
           <View style={styles.footerActions}>
             <Pressable accessibilityRole="button" accessibilityState={{ selected: ghost }} onPress={() => setGhost(!ghost)} style={styles.ghostButton}><Text style={styles.ghostText}>{ghost ? 'ゴーストを解除' : 'ゴーストにする'}</Text></Pressable>

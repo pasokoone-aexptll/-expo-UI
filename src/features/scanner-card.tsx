@@ -1,3 +1,6 @@
+import { GradientText } from '@/components/gradient-text';
+import { NumberText } from '@/components/number-text';
+import { RoundedText as Text } from '@/components/rounded-text';
 import { CardHandle } from '@/components/card-handle';
 import MaskedView from '@react-native-masked-view/masked-view';
 import { BlurView } from 'expo-blur';
@@ -5,7 +8,7 @@ import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
 import Animated, {
   cancelAnimation, Easing, FadeInDown, interpolate,
   useAnimatedProps,
@@ -51,7 +54,7 @@ function Discovery({ user, index, done }: { user: FoundUser; index: number; done
         <BlurView pointerEvents="none" intensity={45} tint="dark" style={StyleSheet.absoluteFill} />
         <View>
           <Text style={styles.resultLabel}>電信ID</Text>
-          <Text style={[styles.resultId, { color: resultColors[user.color] }]}>{user.electricId}</Text>
+          <GradientText color={resultColors[user.color]} style={styles.resultId}>{user.electricId}</GradientText>
         </View>
         <PeopleCount count={user.headcount} color={resultColors[user.color]} />
         <Text style={styles.resultText}>を発見しました</Text>
@@ -158,7 +161,7 @@ export function ScannerCard({ width, height, idleHeight, electricId, sessionStat
         {busy && <Text style={styles.cancelHint}>タップしてキャンセル</Text>}
         <Pressable accessibilityRole="button" accessibilityLabel={busy ? "スキャンをキャンセル" : ready ? "マップを開く" : "街をスキャンする"} accessibilityState={{ disabled: !isMain }} disabled={!isMain} onPress={busy ? cancel : start} style={[styles.scanButton, !canScan && styles.scanButtonDisabled]}>
           {busy ? <ActivityIndicator size="small" color="#494949" /> : <Image source={require('@/assets/images/scanner/scanner-mascot.png')} contentFit="contain" style={styles.mascot} />}
-          <Text style={[styles.scanButtonText, !busy && styles.idleButtonText]}>{busy ? `電信結界を${found.length}件発見` : ready ? '準備完了・マップを開く' : '街をスキャンする'}</Text>
+          <NumberText color="#494949" style={[styles.scanButtonText, !busy && styles.idleButtonText]}>{busy ? `電信結界を${found.length}件発見` : ready ? '準備完了・マップを開く' : '街をスキャンする'}</NumberText>
         </Pressable>
       </Animated.View>
     </View>

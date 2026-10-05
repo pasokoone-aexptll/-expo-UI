@@ -1,8 +1,9 @@
+import { NumberText } from '@/components/number-text';
 import { GradientText } from '@/components/gradient-text';
 import type { ChatMessage } from '@/types';
 import { SymbolView } from 'expo-symbols';
 import { useEffect, useRef, useState } from 'react';
-import { Animated, PanResponder, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Animated, PanResponder, Pressable, StyleSheet, View } from 'react-native';
 
 export function MapChat({ messages, onScrolling, topSpacing }: { topSpacing: number; messages: ChatMessage[]; onScrolling: (active: boolean) => void }) {
   const offset = useRef(0), origin = useRef(0), content = useRef(0), viewport = useRef(0);
@@ -42,13 +43,13 @@ export function MapChat({ messages, onScrolling, topSpacing }: { topSpacing: num
         {/* 先頭余白も履歴の一部として移動・計測する。 */}
         <View pointerEvents="none" style={{ height: topSpacing, flexShrink: 0 }} />
         {messages.map((message, index) => <View pointerEvents="box-none" key={`${message.number}-${index}`} style={styles.message}>
-          <View {...pan.panHandlers} hitSlop={6} style={styles.metaRow}><Text style={styles.meta}>{message.kind === 'system' ? 'SERVE' : `${message.number}  id: `}</Text>{message.kind !== 'system' && <GradientText color="#666862" style={styles.meta}>{message.senderId}</GradientText>}<Text style={styles.meta}>  {message.time}</Text></View>
-          <View {...pan.panHandlers} hitSlop={6} style={styles.bodyRow}>{message.kind === 'system' && <SymbolView name="arrow.right.to.line" size={21} tintColor="#62645E" />}<Text style={styles.body}>{message.body.split(/(@[^\s@]+|>>\d+)/g).map((part, i) => <Text key={i} style={(part.startsWith('>>') || part.startsWith('@')) ? styles.anchor : undefined}>{part}</Text>)}</Text></View>
+          <View {...pan.panHandlers} hitSlop={6} style={styles.metaRow}><NumberText color="#777973" style={styles.meta}>{message.kind === 'system' ? 'SERVE' : `${message.number}  id: `}</NumberText>{message.kind !== 'system' && <GradientText color="#666862" style={styles.meta}>{message.senderId}</GradientText>}<GradientText color="#777973" style={styles.meta}>{`  ${message.time}`}</GradientText></View>
+          <View {...pan.panHandlers} hitSlop={6} style={styles.bodyRow}>{message.kind === 'system' && <SymbolView name="arrow.right.to.line" size={21} tintColor="#62645E" />}{message.kind === 'system' ? <GradientText color="#454842" style={styles.body}>{message.body}</GradientText> : <NumberText style={styles.body}>{message.body}</NumberText>}</View>
         </View>)}
       </Animated.View>
     </View>
     {unread > 0 && <Pressable accessibilityRole="button" accessibilityLabel={`新着${unread}件。最新のチャットへ移動`} onPress={() => move(content.current)} style={({ pressed }) => [styles.newMessages, pressed && styles.newMessagesPressed]}>
-      <SymbolView name="arrow.down" size={14} tintColor="#168EFF" /><Text style={styles.newMessagesText}>新着 {unread}件</Text>
+      <SymbolView name="arrow.down" size={14} tintColor="#168EFF" /><NumberText color="#168EFF" style={styles.newMessagesText}>{`新着 ${unread}件`}</NumberText>
     </Pressable>}
   </View>;
 }

@@ -1,4 +1,5 @@
-import { Platform, StyleSheet, Text, type TextProps } from 'react-native';
+import { RoundedText as Text } from '@/components/rounded-text';
+import { Platform, StyleSheet, type TextProps } from 'react-native';
 
 import { Fonts, ThemeColor } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
@@ -35,30 +36,36 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20,
     fontWeight: 500,
+    fontFamily: Fonts.rounded,
   },
   smallBold: {
     fontSize: 14,
     lineHeight: 20,
     fontWeight: 700,
+    fontFamily: Fonts.rounded,
   },
   default: {
     fontSize: 16,
     lineHeight: 24,
     fontWeight: 500,
+    fontFamily: Fonts.rounded,
   },
   title: {
     fontSize: 48,
     fontWeight: 600,
     lineHeight: 52,
+    fontFamily: Fonts.rounded,
   },
   subtitle: {
     fontSize: 32,
     lineHeight: 44,
     fontWeight: 600,
+    fontFamily: Fonts.rounded,
   },
   link: {
     lineHeight: 30,
     fontSize: 14,
+    fontFamily: Fonts.rounded,
   },
   linkPrimary: {
     lineHeight: 30,
@@ -66,7 +73,7 @@ const styles = StyleSheet.create({
     color: '#3c87f7',
   },
   code: {
-    fontFamily: Fonts.mono,
+    fontFamily: Fonts.rounded,
     fontWeight: Platform.select({ android: 700 }) ?? 500,
     fontSize: 12,
   },
