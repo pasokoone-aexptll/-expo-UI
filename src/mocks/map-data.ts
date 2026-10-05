@@ -1,4 +1,4 @@
-import type { AreaId, Coordinate, ChatMessage } from '@/types';
+import type { AreaId, ChatMessage, Coordinate } from '@/types';
 
 // ASSUMED: 中心座標・ポリゴン・点の配置はUI確認用。実際の結界や現在地ではありません。
 export const MAP_AREAS = [
@@ -22,10 +22,19 @@ export function getMapArea(id: AreaId) {
 export function initialChat(id: AreaId): ChatMessage[] {
   const area = MAP_AREAS.find(item => item.id === id)!;
   return [
+    // 添付の履歴表示例。通常は下のログのみ見え、拡大・スクロールで辿れる。
+    { number: 3, senderId: 'nemu_o0x', time: '00:19:43', body: 'カルマ', kind: 'message' },
+    { number: 4, senderId: 'nemu_o0x', time: '00:19:43', body: '忘れらんねぇよ', kind: 'message' },
+    { number: 5, senderId: 'nemu_o0x', time: '00:19:43', body: 'あんこ', kind: 'message' },
+    { number: 6, senderId: 'xy_0x0_yx', time: '00:19:43', body: 'なんか過疎り気味', kind: 'message' },
+    { number: 7, senderId: 'xy_0x0_yx', time: '00:19:43', body: '今日ひとすくな', kind: 'message' },
+    { number: 8, senderId: 'xy_0x0_yx', time: '00:19:43', body: '今日ひとすくな', kind: 'message' },
     { number: 8, senderId: 'nemu_o0x', time: '00:20:01', body: 'わかる最近いない', kind: 'message' },
     { number: 9, senderId: '_x_y_x_o0', time: '00:22:09', body: 'みんなホテルじゃない？', kind: 'message' },
     { number: 10, senderId: 'nyan_x_y_x', time: '00:26:40', body: '土日は広場おおい', kind: 'message' },
     { number: 0, senderId: 'SERVE', time: '00:19:43', body: `4ever_luv_uが${area.name}ログイン`, kind: 'system' },
+    { number: 11, senderId: 'nyan_x_y_x', time: '00:26:47', body: '>>9 神社のところには人いたけど', kind: 'message' },
+    { number: 11, senderId: 'nyan_x_y_x', time: '00:26:47', body: '>>9 神社のところには人いたけど', kind: 'message' },
     { number: 11, senderId: 'nyan_x_y_x', time: '00:26:47', body: '>>9 神社のところには人いたけど', kind: 'message' },
   ];
 }

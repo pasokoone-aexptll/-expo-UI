@@ -1,25 +1,26 @@
-import { Image } from 'expo-image';
-import { forwardRef, useEffect, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
-import MapView, { Marker, Polygon, type Region, type LongPressEvent } from 'react-native-maps';
-import Animated, { useAnimatedStyle, useSharedValue, withTiming, type SharedValue } from 'react-native-reanimated';
-import { PeopleCount } from '@/components/people-count';
 import { GradientText } from '@/components/gradient-text';
 import { MapBubble } from '@/components/map-bubble';
+import { PeopleCount } from '@/components/people-count';
 import type { getMapArea } from '@/mocks/map-data';
 import type { Coordinate } from '@/types';
+import { Image } from 'expo-image';
+import { LinearGradient } from 'expo-linear-gradient';
+import { forwardRef, useEffect, useState, useRef, useImperativeHandle } from 'react';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import MapView, { Marker, Polygon, type LongPressEvent, type Region } from 'react-native-maps';
+import Animated, { useAnimatedStyle, useSharedValue, withTiming, type SharedValue } from 'react-native-reanimated';
 
 // ピンのズーム曲線はここで調整（点・名前・ステッカー共通）。
 const PIN_ZOOM_CURVE = {
-  minScale: 0.28,       // 広域表示で近づく最小倍率
-  maxScale: 1.4,        // 詳細表示で近づく最大倍率
-  referenceSpan: 0.0025, // この緯度幅で最小・最大の中間倍率になる
+  minScale: 0.58,       // 広域表示で近づく最小倍率
+  maxScale: 1.8,        // 詳細表示で近づく最大倍率
+  referenceSpan: 0.0015, // この緯度幅で最小・最大の中間倍率になる
   exponent: 0.8,       // 小さくするほど中間付近の変化が緩やか（正の値）
 };
 
 export type MapPerson = { id: string; label: string; coordinate: Coordinate };
 type Props = { area: ReturnType<typeof getMapArea>; onReady: () => void; onMention: (person: MapPerson) => void; onMapPress: () => void; onMapLongPress: (event: LongPressEvent) => void; onMoving: (active: boolean) => void };
-function Pin({ person, zone, compact, zoomScale, onMention }: { person?: MapPerson; zone: ReturnType<typeof getMapArea>['zones'][number]; compact: boolean; zoomScale: SharedValue<number>; onMention: Props['onMention'] }) {
+function Pin({ person, zone, compact, zoomScale, pitchScale, onMention }: { person?: MapPerson; zone: ReturnType<typeof getMapArea>['zones'][number]; compact: boolean; zoomScale: SharedValue<number>; pitchScale: SharedValue<number>; onMention: Props['onMention'] }) {
   const scale = useSharedValue(1);
   const isPerson = !!person;
   // 固定フレーム: 点の中心(y=100) / ステッカー下端(y=210)を地理座標に固定。
@@ -30,12 +31,13 @@ function Pin({ person, zone, compact, zoomScale, onMention }: { person?: MapPers
     const size = scale.value * zoom;
     return { transform: [{ translateY: (1 - size) * (anchorY - frameHeight / 2) }, { scale: size }] };
   });
+  const dotPerspective = useAnimatedStyle(() => ({ transform: [{ scaleY: pitchScale.value }] }));
   function pressIn() { scale.value = withTiming(1.1, { duration: 90 }); }
   function pressOut() { scale.value = withTiming(1, { duration: 160 }); }
   return <Marker coordinate={person?.coordinate ?? zone.coordinate} centerOffset={{ x: 0, y: frameHeight / 2 - anchorY }} anchor={{ x: 0.5, y: anchorY / frameHeight }} stopPropagation>
     <Pressable accessible accessibilityLabel={person ? `${person.label}。長押しでメンション` : `電信ID ${zone.electricId}`} onPressIn={pressIn} onPressOut={pressOut} onLongPress={person ? () => onMention(person) : undefined} delayLongPress={500} style={{ width: 210, height: frameHeight }}>
       <Animated.View style={[styles.pin, { height: frameHeight }, animated]}>
-        {person ? <><View style={styles.personBubble}>{!compact && <MapBubble><GradientText color={zone.color} style={styles.personText}>{person.label}</GradientText></MapBubble>}</View><View style={[styles.dot, { backgroundColor: zone.color }]} /></> : <>
+        {person ? <><View style={styles.personBubble}>{!compact && <MapBubble><GradientText color={zone.color} style={styles.personText}>{person.label}</GradientText></MapBubble>}</View><Animated.View style={[styles.dot, dotPerspective]}><View style={styles.dotRim}><LinearGradient colors={[zone.color, zone.color === '#168EFF' ? '#94C6FF' : zone.color === '#FF646D' ? '#FFADB4' : '#DC9BFF']} style={styles.dotFill} /></View></Animated.View></> : <>
           <View style={[styles.stickerBubble, compact && { bottom: 104 }]}><MapBubble><View>{!compact && <Text style={styles.label}>電信ID</Text>}<GradientText color={zone.color} style={styles.id}>{compact ? `…${zone.electricId.slice(-2)}` : zone.electricId}</GradientText></View><PeopleCount count={zone.headcount} color={zone.color} /></MapBubble></View>
           <Image source={zone.sticker} style={[styles.sticker, styles.stickerSize]} contentFit="contain" contentPosition="bottom" />
         </>}
@@ -44,6 +46,18 @@ function Pin({ person, zone, compact, zoomScale, onMention }: { person?: MapPers
   </Marker>;
 }
 export const AreaMap = forwardRef<MapView, Props>(function AreaMap({ area, onReady, onMention, onMapPress, onMapLongPress, onMoving }, ref) {
+  const mapRef = useRef<MapView>(null);
+  useImperativeHandle(ref, () => mapRef.current!);
+  const pitchScale = useSharedValue(Math.cos(Math.PI / 4));
+  const cameraPending = useRef(false);
+  const mounted = useRef(true);
+  useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
+  async function updatePitch() {
+    if (cameraPending.current || !mapRef.current) return;
+    cameraPending.current = true;
+    try { const camera = await mapRef.current.getCamera(); if (mounted.current) pitchScale.value = withTiming(Math.max(0.4, Math.cos(camera.pitch * Math.PI / 180)), { duration: 100 }); }
+    finally { cameraPending.current = false; }
+  }
   const zoomScale = useSharedValue(1);
   const [compact, setCompact] = useState(false);
   useEffect(() => setCompact(false), [area.id]);
@@ -56,16 +70,17 @@ export const AreaMap = forwardRef<MapView, Props>(function AreaMap({ area, onRea
     const size = minScale + (maxScale - minScale) / (1 + Math.pow(span, exponent));
     zoomScale.value = animated ? withTiming(size, { duration: 90 }) : size;
   }
-  return <MapView ref={ref} onMapReady={onReady} onRegionChange={region => {
+  return <MapView ref={mapRef} onMapReady={onReady} onRegionChange={region => {
       onMoving(true);
+      void updatePitch().catch(() => undefined);
       updateScale(region, true);
-    }} onRegionChangeComplete={region => { updateScale(region, false); updateDetail(region); onMoving(false); }} onPress={onMapPress} onLongPress={onMapLongPress} style={StyleSheet.absoluteFill} initialCamera={{ center: area.center, pitch: 45, heading: -25, altitude: 650, zoom: 17 }} mapType="mutedStandard" userInterfaceStyle="light" showsPointsOfInterests={false} showsBuildings={false} showsCompass={false} showsScale={false} showsUserLocation={false}>
+    }} onRegionChangeComplete={region => { updateScale(region, false); void updatePitch().catch(() => undefined); updateDetail(region); onMoving(false); }} onPress={onMapPress} onLongPress={onMapLongPress} style={StyleSheet.absoluteFill} initialCamera={{ center: area.center, pitch: 45, heading: -25, altitude: 650, zoom: 17 }} mapType="mutedStandard" userInterfaceStyle="light" showsPointsOfInterests={false} showsBuildings={false} showsCompass={false} showsScale={false} showsUserLocation={false}>
     {area.zones.map(zone => <Polygon key={zone.key} coordinates={zone.boundary} fillColor={`${zone.color}35`} strokeColor={zone.color} strokeWidth={1} />)}
-    {area.zones.flatMap(zone => zone.people.map(person => <Pin key={person.id} person={person} zone={zone} compact={compact} zoomScale={zoomScale} onMention={onMention} />))}
-    {area.zones.map(zone => <Pin key={zone.key} zone={zone} compact={compact} zoomScale={zoomScale} onMention={onMention} />)}
+    {area.zones.flatMap(zone => zone.people.map(person => <Pin key={person.id} person={person} zone={zone} compact={compact} zoomScale={zoomScale} pitchScale={pitchScale} onMention={onMention} />))}
+    {area.zones.map(zone => <Pin key={zone.key} zone={zone} compact={compact} zoomScale={zoomScale} pitchScale={pitchScale} onMention={onMention} />)}
   </MapView>;
 });
 const styles = StyleSheet.create({
-  pin: { width: 210, alignItems: 'center' }, personBubble: { position: 'absolute', bottom: 20 }, personText: { fontSize: 13 }, dot: { position: 'absolute', bottom: 3, width: 14, height: 14, borderRadius: 7, borderWidth: 2, borderColor: '#FFFFFF' },
+  pin: { width: 210, alignItems: 'center' }, personBubble: { position: 'absolute', bottom: 20 }, personText: { fontSize: 13 }, dot: { position: 'absolute', bottom: -1, width: 22, height: 22, borderRadius: 11, backgroundColor: '#00000018', padding: 2 }, dotRim: { flex: 1, borderRadius: 9, backgroundColor: '#FFFFFF', padding: 3 }, dotFill: { flex: 1, borderRadius: 6 },
   stickerBubble: { position: 'absolute', bottom: 104 }, label: { color: '#888888', fontSize: 9 }, id: { fontSize: 16, fontWeight: '800', fontFamily: 'ui-rounded' }, sticker: { position: 'absolute', bottom: 0, width: 104, height: 104 }, stickerSize: { width: 104, height: 104 },
 });
