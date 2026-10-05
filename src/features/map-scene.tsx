@@ -18,6 +18,8 @@ import Animated, { FadeIn, FadeInDown, FadeOutDown, interpolate, useAnimatedStyl
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle, Path } from 'react-native-svg';
 
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+
 function GhostIcon() {
   return <Svg width={23} height={26} viewBox="0 0 24 28"><Path d="M3 24V12a9 9 0 0 1 18 0v12l-4-3-5 4-5-4z" fill="none" stroke="white" strokeWidth={2.2} strokeLinejoin="round" /><Circle cx={9} cy={11} r={1.3} fill="white" /><Circle cx={15} cy={11} r={1.3} fill="white" /></Svg>;
 }
@@ -115,8 +117,8 @@ export function MapScene({ onBack }: { onBack: () => void }) {
       <View style={styles.areaPill}><Text style={styles.areaTitle}>{area.name}</Text><SymbolView name="person.fill" size={16} tintColor="#111111" /><Text style={styles.areaCount}>{area.headcount}</Text></View>
       <View style={styles.headerButton}><AssetPlaceholder style={styles.exitPlaceholder} /></View>
     </Animated.View>
-    {status === 'success' && <Animated.View pointerEvents="none" style={[styles.statusLine, { top: insets.top + 70 }, mutedStyle]}><Text style={styles.onlineText}>{ghost ? 'ゴースト' : 'オンライン'} {elapsed}</Text></Animated.View>}
-    <Pressable accessibilityRole="button" accessibilityLabel="現在地に戻る（モック）" onPress={() => { setAreaId('kabukicho'); move(MOCK_LOCATION); }} style={[styles.locationButton, { position: 'absolute', right: 20, top: insets.top + 64 }]}><SymbolView name="location.fill" size={23} tintColor="#101010" /></Pressable>
+    {status === 'success' && <Animated.View entering={FadeIn.delay(120).duration(300)} pointerEvents="none" style={[styles.statusLine, { top: insets.top + 70 }, mutedStyle]}><Text style={styles.onlineText}>{ghost ? 'ゴースト' : 'オンライン'} {elapsed}</Text></Animated.View>}
+    <AnimatedPressable entering={FadeInDown.delay(100).duration(300)} accessibilityRole="button" accessibilityLabel="現在地に戻る（モック）" onPress={() => { setAreaId('kabukicho'); move(MOCK_LOCATION); }} style={[styles.locationButton, { position: 'absolute', right: 20, top: insets.top + 64 }]}><SymbolView name="location.fill" size={23} tintColor="#101010" /></AnimatedPressable>
     <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, focusStyle]}><BlurView intensity={65} tint="light" style={StyleSheet.absoluteFill} /></Animated.View>
     {mention && <Pressable accessibilityLabel="メンションをキャンセル" onPress={() => setMention(null)} style={StyleSheet.absoluteFill} />}
     {keyboardVisible && <Pressable accessibilityLabel="キーボードを閉じる" onPress={dismissInput} style={StyleSheet.absoluteFill} />}

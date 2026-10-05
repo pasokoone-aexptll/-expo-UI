@@ -8,7 +8,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { forwardRef, useEffect, useState, useRef, useImperativeHandle } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import MapView, { Marker, Polygon, type LongPressEvent, type Region } from 'react-native-maps';
-import Animated, { useAnimatedStyle, useSharedValue, withTiming, type SharedValue } from 'react-native-reanimated';
+import Animated, { cancelAnimation, useAnimatedStyle, useSharedValue, withDelay, withTiming, type SharedValue } from 'react-native-reanimated';
 
 // ピンのズーム曲線はここで調整（点・名前・ステッカー共通）。
 const PIN_ZOOM_CURVE = {
@@ -20,16 +20,23 @@ const PIN_ZOOM_CURVE = {
 
 export type MapPerson = { id: string; label: string; coordinate: Coordinate };
 type Props = { area: ReturnType<typeof getMapArea>; onReady: () => void; onMention: (person: MapPerson) => void; onMapPress: () => void; onMapLongPress: (event: LongPressEvent) => void; onMoving: (active: boolean) => void };
-function Pin({ person, zone, compact, zoomScale, pitchScale, onMention }: { person?: MapPerson; zone: ReturnType<typeof getMapArea>['zones'][number]; compact: boolean; zoomScale: SharedValue<number>; pitchScale: SharedValue<number>; onMention: Props['onMention'] }) {
+function Pin({ person, zone, compact, zoomScale, pitchScale, onMention, mapReady, appearanceDelay }: { mapReady: boolean; appearanceDelay: number; person?: MapPerson; zone: ReturnType<typeof getMapArea>['zones'][number]; compact: boolean; zoomScale: SharedValue<number>; pitchScale: SharedValue<number>; onMention: Props['onMention'] }) {
   const scale = useSharedValue(1);
+  const appearance = useSharedValue(0);
+  useEffect(() => {
+    if (!mapReady) return;
+    // ASSUMED: 地図の準備後、区域ごとに短い間隔で92%→100%のポップイン。
+    appearance.value = withDelay(appearanceDelay, withTiming(1, { duration: 280 }));
+    return () => cancelAnimation(appearance);
+  }, [mapReady, appearanceDelay, appearance]);
   const isPerson = !!person;
   // 固定フレーム: 点の中心(y=100) / ステッカー下端(y=210)を地理座標に固定。
   const frameHeight = isPerson ? 110 : 210;
   const anchorY = isPerson ? 100 : 210;
   const animated = useAnimatedStyle(() => {
     const zoom = zoomScale.value;
-    const size = scale.value * zoom;
-    return { transform: [{ translateY: (1 - size) * (anchorY - frameHeight / 2) }, { scale: size }] };
+    const size = scale.value * zoom * (0.92 + 0.08 * appearance.value);
+    return { opacity: appearance.value, transform: [{ translateY: (1 - size) * (anchorY - frameHeight / 2) }, { scale: size }] };
   });
   const dotPerspective = useAnimatedStyle(() => ({ transform: [{ scaleY: pitchScale.value }] }));
   function pressIn() { scale.value = withTiming(1.1, { duration: 90 }); }
@@ -47,6 +54,7 @@ function Pin({ person, zone, compact, zoomScale, pitchScale, onMention }: { pers
 }
 export const AreaMap = forwardRef<MapView, Props>(function AreaMap({ area, onReady, onMention, onMapPress, onMapLongPress, onMoving }, ref) {
   const mapRef = useRef<MapView>(null);
+  const [mapReady, setMapReady] = useState(false);
   useImperativeHandle(ref, () => mapRef.current!);
   const pitchScale = useSharedValue(Math.cos(Math.PI / 4));
   const cameraPending = useRef(false);
@@ -70,14 +78,14 @@ export const AreaMap = forwardRef<MapView, Props>(function AreaMap({ area, onRea
     const size = minScale + (maxScale - minScale) / (1 + Math.pow(span, exponent));
     zoomScale.value = animated ? withTiming(size, { duration: 90 }) : size;
   }
-  return <MapView ref={mapRef} onMapReady={onReady} onRegionChange={region => {
+  return <MapView ref={mapRef} onMapReady={() => { setMapReady(true); onReady(); }} onRegionChange={region => {
       onMoving(true);
       void updatePitch().catch(() => undefined);
       updateScale(region, true);
     }} onRegionChangeComplete={region => { updateScale(region, false); void updatePitch().catch(() => undefined); updateDetail(region); onMoving(false); }} onPress={onMapPress} onLongPress={onMapLongPress} style={StyleSheet.absoluteFill} initialCamera={{ center: area.center, pitch: 45, heading: -25, altitude: 650, zoom: 17 }} mapType="mutedStandard" userInterfaceStyle="light" showsPointsOfInterests={false} showsBuildings={false} showsCompass={false} showsScale={false} showsUserLocation={false}>
     {area.zones.map(zone => <Polygon key={zone.key} coordinates={zone.boundary} fillColor={`${zone.color}35`} strokeColor={zone.color} strokeWidth={1} />)}
-    {area.zones.flatMap(zone => zone.people.map(person => <Pin key={person.id} person={person} zone={zone} compact={compact} zoomScale={zoomScale} pitchScale={pitchScale} onMention={onMention} />))}
-    {area.zones.map(zone => <Pin key={zone.key} zone={zone} compact={compact} zoomScale={zoomScale} pitchScale={pitchScale} onMention={onMention} />)}
+    {area.zones.flatMap((zone, zoneIndex) => zone.people.map((person, personIndex) => <Pin mapReady={mapReady} appearanceDelay={100 + zoneIndex * 90 + personIndex * 18} key={person.id} person={person} zone={zone} compact={compact} zoomScale={zoomScale} pitchScale={pitchScale} onMention={onMention} />))}
+    {area.zones.map((zone, zoneIndex) => <Pin mapReady={mapReady} appearanceDelay={80 + zoneIndex * 90} key={zone.key} zone={zone} compact={compact} zoomScale={zoomScale} pitchScale={pitchScale} onMention={onMention} />)}
   </MapView>;
 });
 const styles = StyleSheet.create({
