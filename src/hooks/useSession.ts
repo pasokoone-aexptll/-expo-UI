@@ -6,6 +6,7 @@ export type SessionValue = {
   status: SessionStatus;
   profile: Profile | null;
   onlineSeconds: number;
+  ghostSeconds: number;
   ghost: boolean;
   setGhost: (value: boolean) => void;
   simulateLogin: () => void;

@@ -19,7 +19,7 @@ import type { CardId } from '@/types';
 export function CardStack({ expansion, resetKey, onScanComplete }: { expansion: SharedValue<number>; resetKey: number; onScanComplete: () => void }) {
   const { width, height } = useWindowDimensions();
   const insets = useSafeAreaInsets();
-  const { status, profile, onlineSeconds, ghost, setGhost } = useSession();
+  const { status, profile, onlineSeconds, ghostSeconds, ghost, setGhost } = useSession();
   const { status: scanStatus, found, start, reset } = useScan();
   // タブと同じ並び: 左がスキャナー、右がログイン。
   const page = useSharedValue(1);
@@ -127,7 +127,7 @@ export function CardStack({ expansion, resetKey, onScanComplete }: { expansion: 
       <GestureDetector gesture={pan}>
         <View pointerEvents="box-none" style={[styles.stage, styles.cardLayer]}>
           <Animated.View pointerEvents={selected === 'profile' ? 'auto' : 'none'} style={[styles.profile, { left: (width - cardWidth) / 2, top: profileTop }, profileStyle]}>
-            <ProfileCard cardWidth={cardWidth} cardHeight={profileHeight} status={status} profile={profile} onlineSeconds={onlineSeconds} ghost={ghost} setGhost={setGhost} onAnimationLockChange={setProfileAnimating} />
+            <ProfileCard cardWidth={cardWidth} cardHeight={profileHeight} status={status} profile={profile} onlineSeconds={ghost ? ghostSeconds : onlineSeconds} ghost={ghost} setGhost={setGhost} onAnimationLockChange={setProfileAnimating} />
           </Animated.View>
           <Animated.View pointerEvents={selected === 'scanner' ? 'auto' : 'none'} style={[styles.scanner, scannerStyle]}>
             <ScannerCard width={cardWidth} height={scannerHeight} idleHeight={scannerIdleHeight} electricId={profile?.electricId ?? ''} sessionStatus={status} isMain={selected === 'scanner'} expansion={expansion} scanStatus={scanStatus} found={found} start={start} cancel={cancelScan} />
