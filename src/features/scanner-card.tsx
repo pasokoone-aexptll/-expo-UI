@@ -29,6 +29,7 @@ type ScannerCardProps = {
   expansion: SharedValue<number>;
   scanStatus: ScanStatus;
   found: FoundUser[];
+  ready: boolean;
   start: () => void;
   cancel: () => void;
 };
@@ -59,7 +60,7 @@ function Discovery({ user, index, done }: { user: FoundUser; index: number; done
   );
 }
 
-export function ScannerCard({ width, height, idleHeight, electricId, sessionStatus, isMain, expansion, scanStatus, found, start, cancel }: ScannerCardProps) {
+export function ScannerCard({ width, height, idleHeight, electricId, sessionStatus, isMain, expansion, scanStatus, found, ready, start, cancel }: ScannerCardProps) {
   const [screenActive, setScreenActive] = useState(true);
   useFocusEffect(useCallback(() => {
     setScreenActive(true);
@@ -155,9 +156,9 @@ export function ScannerCard({ width, height, idleHeight, electricId, sessionStat
           </>
         ) : null}
         {busy && <Text style={styles.cancelHint}>タップしてキャンセル</Text>}
-        <Pressable accessibilityRole="button" accessibilityLabel={busy ? "スキャンをキャンセル" : "街をスキャンする"} accessibilityState={{ disabled: !isMain }} disabled={!isMain} onPress={busy ? cancel : start} style={[styles.scanButton, !canScan && styles.scanButtonDisabled]}>
+        <Pressable accessibilityRole="button" accessibilityLabel={busy ? "スキャンをキャンセル" : ready ? "マップを開く" : "街をスキャンする"} accessibilityState={{ disabled: !isMain }} disabled={!isMain} onPress={busy ? cancel : start} style={[styles.scanButton, !canScan && styles.scanButtonDisabled]}>
           {busy ? <ActivityIndicator size="small" color="#494949" /> : <Image source={require('@/assets/images/scanner/scanner-mascot.png')} contentFit="contain" style={styles.mascot} />}
-          <Text style={[styles.scanButtonText, !busy && styles.idleButtonText]}>{busy ? `電信結界を${found.length}件発見` : '街をスキャンする'}</Text>
+          <Text style={[styles.scanButtonText, !busy && styles.idleButtonText]}>{busy ? `電信結界を${found.length}件発見` : ready ? '準備完了・マップを開く' : '街をスキャンする'}</Text>
         </Pressable>
       </Animated.View>
     </View>

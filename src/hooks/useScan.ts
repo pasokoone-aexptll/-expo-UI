@@ -5,6 +5,7 @@ import type { FoundUser, ScanStatus } from '@/types';
 
 export function useScan() {
   const [status, setStatus] = useState<ScanStatus>('idle');
+  const [ready, setReady] = useState(false);
   const [found, setFound] = useState<FoundUser[]>([]);
   const running = useRef(false);
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
@@ -26,7 +27,7 @@ export function useScan() {
     timers.current = MOCK_FOUND_USERS.map((user, index) =>
       setTimeout(() => {
         setFound((current) => [...current, user]);
-        if (index === MOCK_FOUND_USERS.length - 1) setStatus('done');
+        if (index === MOCK_FOUND_USERS.length - 1) { setReady(true); setStatus('done'); }
       }, SCAN_FOUND_INTERVAL_MS * (index + 1)),
     );
   }
@@ -37,5 +38,5 @@ export function useScan() {
     setStatus('idle');
   }, [clearTimers]);
 
-  return { status, found, start, reset };
+  return { status, found, ready, start, reset };
 }
