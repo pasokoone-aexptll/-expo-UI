@@ -13,7 +13,7 @@ import { SymbolView } from 'expo-symbols';
 import { useEffect, useRef, useState } from 'react';
 import { Keyboard, Pressable, StyleSheet, Text, TextInput, useWindowDimensions, View } from 'react-native';
 import type MapView from 'react-native-maps';
-import type { LongPressEvent } from 'react-native-maps';
+import type { Camera, LongPressEvent } from 'react-native-maps';
 import Animated, { FadeIn, FadeInDown, FadeOutDown, interpolate, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle, Path } from 'react-native-svg';
@@ -29,6 +29,9 @@ export function MapScene({ onBack }: { onBack: () => void }) {
   const [draft, setDraft] = useState('');
   const [keyboardVisible, setKeyboardVisible] = useState(false);
   const [mention, setMention] = useState<MapPerson | null>(null);
+  const mentionCamera = useRef<Camera | null>(null);
+  const mentionRequest = useRef(0);
+  useEffect(() => () => { mentionRequest.current += 1; }, []);
   const inputRef = useRef<TextInput>(null);
   const area = useArea(areaId);
   const { messages, send } = useChat(areaId);
@@ -57,13 +60,13 @@ export function MapScene({ onBack }: { onBack: () => void }) {
   const chatReveal = useAnimatedStyle(() => ({ height: interpolate(chatFocus.value, [0, 1], [windowHeight * 0.27, fullChatHeight]) }));
   function closeChat() { chatFocus.value = withTiming(0, { duration: 240 }); }
   function setChatScrolling(active: boolean) {
-    if (active) setMention(null);
+    if (active) dismissMention();
     chatFocus.value = withTiming(active ? 1 : 0, { duration: 240 });
   }
   function dismissInput() {
     inputRef.current?.blur();
     Keyboard.dismiss();
-    setMention(null);
+    dismissMention();
     closeChat();
   }
   function setMapMoving(active: boolean) { mapMoving.value = withTiming(active ? 1 : 0, { duration: 150 }); }
@@ -73,6 +76,7 @@ export function MapScene({ onBack }: { onBack: () => void }) {
   async function mapLongPress(event: LongPressEvent) {
     const position = event.nativeEvent.position;
     const requestedArea = areaId;
+    const requestAtStart = mentionRequest.current;
     const nativeMap = map.current;
     if (!nativeMap) return;
     // MapKitの長押しでも点の画面位置で判定。離れた場所はメンション対象にしない。
@@ -81,26 +85,44 @@ export function MapScene({ onBack }: { onBack: () => void }) {
       catch { return { person, distance: Infinity }; }
     }));
     const nearest = candidates.sort((a, b) => a.distance - b.distance)[0];
-    if (currentArea.current === requestedArea && nearest?.distance < 28) offerMention(nearest.person);
+    if (mentionRequest.current === requestAtStart && currentArea.current === requestedArea && nearest?.distance < 28) offerMention(nearest.person);
   }
-  function offerMention(person: MapPerson) {
+  function dismissMention(restore = true) {
+    mentionRequest.current += 1;
+    const camera = mentionCamera.current;
+    mentionCamera.current = null;
+    setMention(null);
+    if (restore && camera) map.current?.animateCamera(camera, { duration: 450 });
+  }
+  async function offerMention(person: MapPerson) {
+    const request = ++mentionRequest.current;
+    const nativeMap = map.current;
+    if (!nativeMap) return;
     setMention(person);
-    map.current?.animateCamera({ center: person.coordinate, altitude: 90, zoom: 20, pitch: 45 }, { duration: 850 });
+    try {
+      const camera = mentionCamera.current ?? await nativeMap.getCamera();
+      if (request !== mentionRequest.current) return;
+      mentionCamera.current = camera;
+      nativeMap.animateCamera({ center: person.coordinate, altitude: 90, zoom: 20, pitch: 45 }, { duration: 850 });
+    } catch {
+      // カメラ取得に失敗した場合は元の表示のままメンション操作を続ける。
+    }
   }
   function insertMention() {
     if (!mention) return;
     setDraft(current => `@${mention.label} ${current}`);
-    setMention(null);
+    dismissMention(false);
     inputRef.current?.focus();
   }
   function move(center: Coordinate) {
+    dismissMention(false);
     map.current?.animateCamera({ center, pitch: 45, heading: -25, altitude: 650 }, { duration: 650 });
   }
   function submit() { if (!draft.trim()) return; send(draft); setDraft(''); }
   const elapsedSeconds = ghost ? ghostSeconds : onlineSeconds;
   const elapsed = `${String(Math.floor(elapsedSeconds / 60)).padStart(2, '0')}:${String(elapsedSeconds % 60).padStart(2, '0')}`;
   return <View style={styles.scene}>
-    <AreaMap ref={map} area={area} onMoving={setMapMoving} onMention={offerMention} onMapLongPress={mapLongPress} onMapPress={() => { setMention(null); Keyboard.dismiss(); }} onReady={() => { map.current?.setNativeProps({ showsBuildings: false }); }} />
+    <AreaMap ref={map} area={area} onMoving={setMapMoving} onMention={offerMention} onMapLongPress={mapLongPress} onMapPress={() => { dismissMention(); Keyboard.dismiss(); }} onReady={() => { map.current?.setNativeProps({ showsBuildings: false }); }} />
     <Animated.View pointerEvents="none" style={[styles.readingBlur, { height: windowHeight * 0.45 + 100 }, restingBlur]}>
       <MaskedView style={StyleSheet.absoluteFill} maskElement={<LinearGradient colors={['transparent', '#000000']} locations={[0, 1]} style={StyleSheet.absoluteFill} />}>
         <BlurView intensity={70} tint="light" style={StyleSheet.absoluteFill} />
@@ -120,7 +142,7 @@ export function MapScene({ onBack }: { onBack: () => void }) {
     {status === 'success' && <Animated.View entering={FadeIn.delay(120).duration(300)} pointerEvents="none" style={[styles.statusLine, { top: insets.top + 70 }, mutedStyle]}><Text style={styles.onlineText}>{ghost ? 'ゴースト' : 'オンライン'} {elapsed}</Text></Animated.View>}
     <AnimatedPressable entering={FadeInDown.delay(100).duration(300)} accessibilityRole="button" accessibilityLabel="現在地に戻る（モック）" onPress={() => { setAreaId('kabukicho'); move(MOCK_LOCATION); }} style={[styles.locationButton, { position: 'absolute', right: 20, top: insets.top + 64 }]}><SymbolView name="location.fill" size={23} tintColor="#101010" /></AnimatedPressable>
     <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, focusStyle]}><BlurView intensity={65} tint="light" style={StyleSheet.absoluteFill} /></Animated.View>
-    {mention && <Pressable accessibilityLabel="メンションをキャンセル" onPress={() => setMention(null)} style={StyleSheet.absoluteFill} />}
+    {mention && <Pressable accessibilityLabel="メンションをキャンセル" onPress={() => dismissMention()} style={StyleSheet.absoluteFill} />}
     {keyboardVisible && <Pressable accessibilityLabel="キーボードを閉じる" onPress={dismissInput} style={StyleSheet.absoluteFill} />}
     <Animated.View pointerEvents="box-none" style={[styles.bottom, bottomStyle]}>
       <Animated.View pointerEvents={keyboardVisible ? 'none' : 'box-none'} entering={FadeIn.delay(250).duration(500)} style={[styles.chat, { height: fullChatHeight }, chatOpacity]}>
@@ -138,11 +160,11 @@ export function MapScene({ onBack }: { onBack: () => void }) {
         <Text style={styles.mentionText}>このユーザーにメンション付きでチャットしますか？</Text>
         <View style={{ flexDirection: 'row', gap: 12, alignItems: 'center', width: '100%' }}>
           <Pressable accessibilityRole="button" onPress={insertMention} style={styles.mentionButton}><Text style={styles.mentionButtonText}>@付きチャット</Text></Pressable>
-          <Pressable accessibilityRole="button" onPress={() => setMention(null)} style={styles.mentionCancel}><Text style={styles.cancelText}>キャンセル</Text></Pressable>
+          <Pressable accessibilityRole="button" onPress={() => dismissMention()} style={styles.mentionCancel}><Text style={styles.cancelText}>キャンセル</Text></Pressable>
         </View>
       </Animated.View>}
-      <Animated.View onTouchStart={() => setMention(null)} entering={FadeInDown.delay(180).duration(400)} style={[styles.composer, mutedStyle]}>
-        <TextInput onFocus={() => { setKeyboardVisible(true); setMention(null); closeChat(); }} ref={inputRef} accessibilityLabel="チャットメッセージ" placeholder="入力…" placeholderTextColor="#A5A5A5" value={draft} onChangeText={setDraft} onSubmitEditing={submit} returnKeyType="send" blurOnSubmit={false} style={styles.input} />
+      <Animated.View onTouchStart={() => dismissMention()} entering={FadeInDown.delay(180).duration(400)} style={[styles.composer, mutedStyle]}>
+        <TextInput onFocus={() => { setKeyboardVisible(true); dismissMention(); closeChat(); }} ref={inputRef} accessibilityLabel="チャットメッセージ" placeholder="入力…" placeholderTextColor="#A5A5A5" value={draft} onChangeText={setDraft} onSubmitEditing={submit} returnKeyType="send" blurOnSubmit={false} style={styles.input} />
         {status === 'success' && <Pressable accessibilityRole="switch" accessibilityLabel="ゴーストモード" accessibilityState={{ checked: ghost }} onPress={() => setGhost(!ghost)} style={[styles.ghostButton, ghost && styles.ghostEnabled]}><GhostIcon /></Pressable>}
       </Animated.View>
     </Animated.View>
