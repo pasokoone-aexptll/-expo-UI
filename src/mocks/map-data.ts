@@ -14,7 +14,7 @@ export function getMapArea(id: AreaId) {
   const groups = [{ x: -0.7, y: 0.85, id: '*2591', count: 5 }, { x: 0.5, y: 0, id: '*4647', count: 7 }, { x: 0.55, y: -1, id: '*2591', count: 5 }];
   return { ...area, zones: groups.map((g, index) => ({
     key: `${id}-${index}`, color: MAP_COLORS[index], electricId: g.id, headcount: g.count,
-    coordinate: coordinate(g.x, g.y), sticker: index === 1 ? require('@/assets/images/login/demo-sticker.png') : index === 0 ? require('@/assets/images/map/demo3-sticker.png') : require('@/assets/images/map/demo2-sticker.png'),
+    coordinate: coordinate(g.x, g.y), sticker: index === 1 ? require('@/assets/images/login/demo-sticker.png') : null,
     boundary: [[-0.65,0.4],[0.65,0.4],[0.65,-0.4],[-0.65,-0.4]].map(([x,y]) => coordinate(g.x+x,g.y+y)),
     people: Array.from({ length: id === 'kabukicho' ? g.count : 3 }, (_, n) => ({ id: `${id}-${index}-${n}`, label: '_x_y_x_oO', coordinate: coordinate(g.x - 0.5 + (n % 3) * 0.34, g.y - 0.3 + Math.floor(n / 3) * 0.21) })),
   })) };

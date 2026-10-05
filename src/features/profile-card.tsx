@@ -119,7 +119,7 @@ export function ProfileCard({ cardWidth, cardHeight, status, profile, onlineSeco
           <Image source={require('@/assets/images/login/demo-sticker.png')} contentFit="contain" style={StyleSheet.absoluteFill} />
           <View style={styles.stickerCount}><PeopleCount count={profile?.headcount ?? 0} color="#454545" /></View>
         </View>
-        <View style={styles.onlinePill}><View style={styles.onlineDot} /><Text style={styles.onlineText}>{ghost ? 'ゴースト' : 'オンライン'} {minutes}:{seconds}</Text></View>
+        <View style={styles.onlinePill}><View style={styles.onlineDot} /><Text style={styles.onlineText}>オンライン {minutes}:{seconds}</Text></View>
         </View>
         <View style={styles.footer}>
           <Image source={require('@/assets/images/login/tokyo-city-background.png')} contentFit="cover" style={StyleSheet.absoluteFill} />

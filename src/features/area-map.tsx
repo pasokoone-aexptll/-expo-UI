@@ -1,5 +1,3 @@
-import { GradientText } from '@/components/gradient-text';
-import { MapBubble } from '@/components/map-bubble';
 import { Image } from 'expo-image';
 import { forwardRef } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
@@ -7,15 +5,15 @@ import MapView, { Marker, Polygon } from 'react-native-maps';
 import { PeopleCount } from '@/components/people-count';
 import type { getMapArea } from '@/mocks/map-data';
 
-type Props = { area: ReturnType<typeof getMapArea>; onReady: () => void };
-export const AreaMap = forwardRef<MapView, Props>(function AreaMap({ area, onReady }, ref) {
-  return <MapView ref={ref} onMapReady={onReady} style={StyleSheet.absoluteFill} initialCamera={{ center: area.center, pitch: 45, heading: -25, altitude: 650, zoom: 17 }} mapType="mutedStandard" userInterfaceStyle="light" showsPointsOfInterests={false} showsBuildings={false} showsCompass={false} showsScale={false} showsUserLocation={false}>
+type Props = { area: ReturnType<typeof getMapArea> };
+export const AreaMap = forwardRef<MapView, Props>(function AreaMap({ area }, ref) {
+  return <MapView ref={ref} style={StyleSheet.absoluteFill} initialCamera={{ center: area.center, pitch: 45, heading: -25, altitude: 650, zoom: 17 }} userInterfaceStyle="light" showsPointsOfInterests={false} showsBuildings={false} showsCompass={false} showsScale={false} showsUserLocation={false}>
     {area.zones.map(zone => <Polygon key={zone.key} coordinates={zone.boundary} fillColor={`${zone.color}35`} strokeColor={zone.color} strokeWidth={1} />)}
-    {area.zones.flatMap(zone => zone.people.map(person => <Marker key={person.id} coordinate={person.coordinate} anchor={{ x: 0.5, y: 1 }} tracksViewChanges={true}>
-      <View style={styles.person}><MapBubble><GradientText color={zone.color} style={styles.personText}>{person.label}</GradientText></MapBubble><View style={[styles.dot, { backgroundColor: zone.color }]} /></View>
+    {area.zones.flatMap(zone => zone.people.map(person => <Marker key={person.id} coordinate={person.coordinate} anchor={{ x: 0.5, y: 1 }} tracksViewChanges={false}>
+      <View style={styles.person}><View style={styles.personLabel}><Text style={[styles.personText, { color: zone.color }]}>{person.label}</Text></View><View style={styles.tail} /><View style={[styles.dot, { backgroundColor: zone.color }]} /></View>
     </Marker>))}
     {area.zones.map(zone => <Marker key={zone.key} coordinate={zone.coordinate} anchor={{ x: 0.5, y: 0.7 }}>
-      <View style={styles.stickerMarker}><MapBubble><View><Text style={styles.label}>電信ID</Text><GradientText color={zone.color} style={styles.id}>{zone.electricId}</GradientText></View><PeopleCount count={zone.headcount} color={zone.color} /></MapBubble>
+      <View style={styles.stickerMarker}><View style={styles.bubble}><View><Text style={styles.label}>電信ID</Text><Text style={[styles.id, { color: zone.color }]}>{zone.electricId}</Text></View><PeopleCount count={zone.headcount} color={zone.color} /></View><View style={styles.tail} />
         {zone.sticker ? <Image source={zone.sticker} style={styles.sticker} contentFit="contain" /> : <View style={[styles.sticker, styles.placeholder]} />}
       </View>
     </Marker>)}
