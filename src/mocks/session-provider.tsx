@@ -68,12 +68,18 @@ export function SessionProvider({ children }: PropsWithChildren) {
     setStatus('idle');
     setProfile(null);
     setOnlineSeconds(0);
-    setGhost(false);
+    ghostStart.current = null;
+    setGhostSeconds(0);
+    updateGhost(false);
+  }
+
+  function logout() {
+    if (status === 'success') reset();
   }
 
   return (
     <SessionContext.Provider
-      value={{ status, profile, onlineSeconds, ghostSeconds, ghost, setGhost, simulateLogin, reset }}
+      value={{ status, profile, onlineSeconds, ghostSeconds, ghost, setGhost, simulateLogin, logout, reset }}
     >
       {children}
     </SessionContext.Provider>

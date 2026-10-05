@@ -10,6 +10,7 @@ export type SessionValue = {
   ghost: boolean;
   setGhost: (value: boolean) => void;
   simulateLogin: () => void;
+  logout: () => void;
   reset: () => void;
 };
 

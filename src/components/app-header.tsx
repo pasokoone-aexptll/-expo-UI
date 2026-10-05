@@ -1,3 +1,4 @@
+import { ExitButton } from '@/components/exit-button';
 import { StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -10,7 +11,7 @@ export function AppHeader() {
     <View style={[styles.header, { paddingTop: insets.top + 14 }]}>
       <AssetPlaceholder style={styles.wordmark} />
       <View style={styles.actions}>
-        <AssetPlaceholder style={styles.exitIcon} />
+        <ExitButton size={32} />
         <AssetPlaceholder style={styles.avatar} />
       </View>
     </View>

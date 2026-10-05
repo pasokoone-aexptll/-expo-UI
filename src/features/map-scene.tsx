@@ -1,7 +1,7 @@
 import { GradientText } from '@/components/gradient-text';
 import { NumberText } from '@/components/number-text';
 import { RoundedText as Text } from '@/components/rounded-text';
-import { AssetPlaceholder } from '@/components/asset-placeholder';
+import { ExitButton } from '@/components/exit-button';
 import { AreaMap, type MapPerson } from '@/features/area-map';
 import { MapChat } from '@/features/map-chat';
 import { useArea } from '@/hooks/useArea';
@@ -140,7 +140,7 @@ export function MapScene({ onBack }: { onBack: () => void }) {
     <Animated.View entering={FadeIn.duration(450)} style={[styles.header, { top: insets.top + 8 }]}>
       <Pressable accessibilityRole="button" accessibilityLabel="スキャナーに戻る" onPress={onBack} style={styles.headerButton}><SymbolView name="chevron.left" tintColor="#555753" size={26} weight="medium" /></Pressable>
       <View style={styles.areaPill}><Text style={styles.areaTitle}>{area.name}</Text><SymbolView name="person.fill" size={16} tintColor="#111111" /><GradientText color="#111111" style={styles.areaCount}>{area.headcount}</GradientText></View>
-      <View style={styles.headerButton}><AssetPlaceholder style={styles.exitPlaceholder} /></View>
+      <View style={styles.headerButton}><ExitButton size={33} /></View>
     </Animated.View>
     {status === 'success' && <Animated.View entering={FadeIn.delay(120).duration(300)} pointerEvents="none" style={[styles.statusLine, { top: insets.top + 70 }, mutedStyle]}><NumberText color="#25B278" style={styles.onlineText}>{`${ghost ? 'ゴースト' : 'オンライン'} ${elapsed}`}</NumberText></Animated.View>}
     <AnimatedPressable entering={FadeInDown.delay(100).duration(300)} accessibilityRole="button" accessibilityLabel="現在地に戻る（モック）" onPress={() => { setAreaId('kabukicho'); move(MOCK_LOCATION); }} style={[styles.locationButton, { position: 'absolute', right: 20, top: insets.top + 64 }]}><SymbolView name="location.fill" size={23} tintColor="#101010" /></AnimatedPressable>

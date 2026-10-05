@@ -5,7 +5,7 @@ import MaskedView from '@react-native-masked-view/masked-view';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SymbolView } from 'expo-symbols';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import Animated, { cancelAnimation, createAnimatedComponent, Easing, useAnimatedProps, useAnimatedStyle, useSharedValue, withDelay, withRepeat, withTiming } from 'react-native-reanimated';
 import Svg, { Circle, Path } from 'react-native-svg';
@@ -32,6 +32,10 @@ type ProfileCardProps = {
 
 export function ProfileCard({ cardWidth, cardHeight, status, profile, onlineSeconds, ghost, setGhost, onAnimationLockChange }: ProfileCardProps) {
   const previousStatus = useRef(status);
+  // ログアウト時も裏面を空にせず、反転が終わるまで表示用の画像・IDを保持する。
+  const [lastProfile, setLastProfile] = useState(profile);
+  useEffect(() => { if (profile) setLastProfile(profile); }, [profile]);
+  const displayedProfile = profile ?? lastProfile;
   const reveal = useSharedValue(0);
   const rotation = useSharedValue(0);
   const completion = useSharedValue(0);
@@ -41,8 +45,16 @@ export function ProfileCard({ cardWidth, cardHeight, status, profile, onlineSeco
     let unlock: ReturnType<typeof setTimeout> | undefined;
     if (status === 'idle') {
       reveal.value = 0;
-      rotation.value = 0; completion.value = 0; check.value = 0; flip.value = 0;
-      onAnimationLockChange(false);
+      rotation.value = 0; completion.value = 0; check.value = 0;
+      if (previousStatus.current === 'success') {
+        onAnimationLockChange(true);
+        flip.value = withTiming(0, { duration: 460, easing: Easing.inOut(Easing.cubic) });
+        unlock = setTimeout(() => { setLastProfile(null); onAnimationLockChange(false); }, 460);
+      } else {
+        flip.value = 0;
+        setLastProfile(null);
+        onAnimationLockChange(false);
+      }
     } else if (status === 'detecting') {
       reveal.value = withTiming(1, { duration: 650, easing: Easing.inOut(Easing.cubic) });
       onAnimationLockChange(true);
@@ -76,7 +88,7 @@ export function ProfileCard({ cardWidth, cardHeight, status, profile, onlineSeco
   const frontStyle = useAnimatedStyle(() => ({ transform: [{ perspective: 900 }, { rotateY: `${flip.value * 180}deg` }] }));
   const backStyle = useAnimatedStyle(() => ({ transform: [{ perspective: 900 }, { rotateY: `${-180 + flip.value * 180}deg` }] }));
   const captionStyle = useAnimatedStyle(() => ({ opacity: 1 - flip.value }));
-  const electricId = profile?.electricId ?? '';
+  const electricId = displayedProfile?.electricId ?? '';
   const ringSize = Math.min(cardWidth * 0.90, cardHeight - 48);
   const minutes = String(Math.floor(onlineSeconds / 60)).padStart(2, '0');
   const seconds = String(onlineSeconds % 60).padStart(2, '0');
@@ -109,7 +121,7 @@ export function ProfileCard({ cardWidth, cardHeight, status, profile, onlineSeco
         </View>
         <Image source={require('@/assets/images/login/barcode.png')} contentFit="contain" style={styles.frontBarcode} />
       </Animated.View>
-      <Animated.View style={[styles.face, { width: cardWidth, height: cardHeight }, backStyle]}>
+      <Animated.View pointerEvents={status === 'success' ? 'auto' : 'none'} accessibilityElementsHidden={status !== 'success'} style={[styles.face, { width: cardWidth, height: cardHeight }, backStyle]}>
         <CardHandle />
         <View style={styles.identity}>
           <Image source={require('@/assets/images/login/dream.png')} contentFit="contain" style={{ width: cardWidth * 0.16, height: cardWidth * 0.11 }} />
@@ -119,14 +131,14 @@ export function ProfileCard({ cardWidth, cardHeight, status, profile, onlineSeco
         <View style={styles.stickerArea}>
         <View style={[styles.sticker, { width: cardHeight * 0.27, height: cardHeight * 0.27 }]}>
           <Image source={require('@/assets/images/login/demo-sticker.png')} contentFit="contain" style={StyleSheet.absoluteFill} />
-          <View style={styles.stickerCount}><PeopleCount count={profile?.headcount ?? 0} color="#454545" /></View>
+          <View style={styles.stickerCount}><PeopleCount count={displayedProfile?.headcount ?? 0} color="#454545" /></View>
         </View>
-        <View style={styles.onlinePill}><View style={styles.onlineDot} /><NumberText color="#25B278" style={styles.onlineText}>{`${ghost ? 'ゴースト' : 'オンライン'} ${minutes}:${seconds}`}</NumberText></View>
+        {status === 'success' && <View style={styles.onlinePill}><View style={styles.onlineDot} /><NumberText color="#25B278" style={styles.onlineText}>{`${ghost ? 'ゴースト' : 'オンライン'} ${minutes}:${seconds}`}</NumberText></View>}
         </View>
         <View style={styles.footer}>
           <Image source={require('@/assets/images/login/tokyo-city-background.png')} contentFit="cover" style={StyleSheet.absoluteFill} />
           <LinearGradient colors={['#00000035', '#000000A0']} style={StyleSheet.absoluteFill} />
-          <NumberText color="#E6E6E6" style={styles.visitText}>{`過去に${profile?.visitCount ?? 0}回、${electricId}電信結界に入りました`}</NumberText>
+          <NumberText color="#E6E6E6" style={styles.visitText}>{`過去に${displayedProfile?.visitCount ?? 0}回、${electricId}電信結界に入りました`}</NumberText>
           <View style={styles.customizeRow}><Text style={styles.customizeText}>電信結界プロファイルでカスタマイズしましょう</Text><SymbolView name="chevron.right" tintColor="#E6E6E6" size={12} /></View>
           <View style={styles.footerActions}>
             <Pressable accessibilityRole="button" accessibilityState={{ selected: ghost }} onPress={() => setGhost(!ghost)} style={styles.ghostButton}><Text style={styles.ghostText}>{ghost ? 'ゴーストを解除' : 'ゴーストにする'}</Text></Pressable>
