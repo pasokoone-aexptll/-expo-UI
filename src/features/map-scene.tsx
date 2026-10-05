@@ -46,7 +46,7 @@ export function MapScene({ onBack }: { onBack: () => void }) {
     return () => frame.remove();
   }, [windowHeight, keyboardHeight, keyboardOpen]);
   const bottomStyle = useAnimatedStyle(() => ({ bottom: keyboardHeight.value, paddingHorizontal: interpolate(keyboardOpen.value, [0, 1], [27, 12]), paddingBottom: interpolate(keyboardOpen.value, [0, 1], [Math.max(8, insets.bottom - 4), 8]) }));
-  const restingBlur = useAnimatedStyle(() => ({ opacity: (1 - mapMoving.value) * (1 - chatFocus.value) }));
+  const restingBlur = useAnimatedStyle(() => ({ bottom: keyboardHeight.value, opacity: (1 - mapMoving.value) * (1 - chatFocus.value) }));
   const focusStyle = useAnimatedStyle(() => ({ opacity: chatFocus.value }));
   const mutedStyle = useAnimatedStyle(() => ({ opacity: 1 - chatFocus.value * 0.85 }));
   const chatOpacity = useAnimatedStyle(() => ({ opacity: interpolate(chatFocus.value, [0, 1], [interpolate(mapMoving.value, [0, 1], [0.78, 0.22]), 1]) }));
@@ -125,7 +125,7 @@ export function MapScene({ onBack }: { onBack: () => void }) {
         <Animated.View pointerEvents="box-none" style={[styles.chatClip, chatReveal]}>
           <MaskedView pointerEvents="box-none" style={StyleSheet.absoluteFill} maskElement={<LinearGradient colors={['transparent', '#000000', '#000000']} locations={[0, 0.14, 1]} style={StyleSheet.absoluteFill} />}>
             <View pointerEvents="box-none" style={[styles.chatContent, { height: fullChatHeight }]}>
-              <MapChat key={areaId} messages={messages} onScrolling={setChatScrolling} />
+              <MapChat key={areaId} topSpacing={windowHeight * 0.8} messages={messages} onScrolling={setChatScrolling} />
             </View>
           </MaskedView>
         </Animated.View>
