@@ -1,7 +1,5 @@
 import { GradientText } from '@/components/gradient-text';
 import type { ChatMessage } from '@/types';
-import MaskedView from '@react-native-masked-view/masked-view';
-import { LinearGradient } from 'expo-linear-gradient';
 import { SymbolView } from 'expo-symbols';
 import { useRef } from 'react';
 import { Animated, PanResponder, StyleSheet, Text, View } from 'react-native';
@@ -13,7 +11,7 @@ export function MapChat({ messages, onScrolling }: { messages: ChatMessage[]; on
   const callback = useRef(onScrolling); callback.current = onScrolling;
   function move(next: number) {
     offset.current = Math.max(0, Math.min(Math.max(0, content.current - viewport.current), next));
-    translation.setValue(-offset.current);
+    translation.setValue(Math.max(0, viewport.current - content.current) - offset.current);
     following.current = content.current - viewport.current - offset.current < 20;
   }
   const pan = useRef(PanResponder.create({
@@ -29,7 +27,7 @@ export function MapChat({ messages, onScrolling }: { messages: ChatMessage[]; on
     onPanResponderTerminationRequest: () => !dragging.current,
   })).current;
   // 親と余白はbox-none。文字行から触れたときだけドラッグを取得する。
-  return <MaskedView pointerEvents="box-none" style={styles.mask} maskElement={<LinearGradient colors={['transparent', '#000000', '#000000']} locations={[0, 0.14, 1]} style={StyleSheet.absoluteFill} />}>
+  return <View pointerEvents="box-none" style={styles.mask}>
     <View pointerEvents="box-none" style={styles.viewport} onLayout={event => { const previous = offset.current; viewport.current = event.nativeEvent.layout.height; move(following.current ? content.current : offset.current); if (dragging.current) origin.current += offset.current - previous; }}>
       <Animated.View pointerEvents="box-none" style={[styles.log, { transform: [{ translateY: translation }] }]} onLayout={event => { content.current = event.nativeEvent.layout.height; move(following.current ? content.current : offset.current); }}>
         {messages.map((message, index) => <View pointerEvents="box-none" key={`${message.number}-${index}`} style={styles.message}>
@@ -38,6 +36,6 @@ export function MapChat({ messages, onScrolling }: { messages: ChatMessage[]; on
         </View>)}
       </Animated.View>
     </View>
-  </MaskedView>;
+  </View>;
 }
 const styles = StyleSheet.create({ mask: { flex: 1 }, viewport: { flex: 1, overflow: 'hidden' }, log: { paddingTop: 30, paddingBottom: 8 }, message: { marginBottom: 16 }, metaRow: { alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap' }, meta: { color: '#777973', fontSize: 13, fontWeight: '600' }, bodyRow: { alignSelf: 'flex-start', maxWidth: '100%', flexDirection: 'row', alignItems: 'center', gap: 4 }, body: { flexShrink: 1, color: '#454842ef', fontSize: 16, fontWeight: '600', lineHeight: 22 }, anchor: { color: '#318FFF' } });

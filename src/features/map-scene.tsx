@@ -25,7 +25,7 @@ export function MapScene({ onBack }: { onBack: () => void }) {
   const insets = useSafeAreaInsets();
   const [areaId, setAreaId] = useState<AreaId>('kabukicho');
   const [draft, setDraft] = useState('');
-  const [chatExpanded, setChatExpanded] = useState(false);
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
   const [mention, setMention] = useState<MapPerson | null>(null);
   const inputRef = useRef<TextInput>(null);
   const area = useArea(areaId);
@@ -39,6 +39,7 @@ export function MapScene({ onBack }: { onBack: () => void }) {
   useEffect(() => {
     const frame = Keyboard.addListener('keyboardWillChangeFrame', event => {
       const visible = Math.max(0, windowHeight - event.endCoordinates.screenY);
+      setKeyboardVisible(visible > 0);
       keyboardHeight.value = withTiming(visible, { duration: event.duration || 250 });
       keyboardOpen.value = withTiming(visible > 0 ? 1 : 0, { duration: event.duration || 250 });
     });
@@ -49,9 +50,20 @@ export function MapScene({ onBack }: { onBack: () => void }) {
   const focusStyle = useAnimatedStyle(() => ({ opacity: chatFocus.value }));
   const mutedStyle = useAnimatedStyle(() => ({ opacity: 1 - chatFocus.value * 0.85 }));
   const chatOpacity = useAnimatedStyle(() => ({ opacity: interpolate(chatFocus.value, [0, 1], [interpolate(mapMoving.value, [0, 1], [0.78, 0.22]), 1]) }));
-  const chatHeight = useAnimatedStyle(() => ({ height: interpolate(chatFocus.value, [0, 1], [windowHeight * 0.27, Math.max(windowHeight * 0.27, windowHeight - keyboardHeight.value - insets.top - insets.bottom - 110)]) }));
-  function closeChat() { setChatExpanded(false); chatFocus.value = withTiming(0, { duration: 240 }); }
-  function setChatScrolling(active: boolean) { setMention(null); if (active) { setChatExpanded(true); setMention(null); chatFocus.value = withTiming(1, { duration: 240 }); } }
+  // 本文のレイアウトは固定し、外側のクリップだけを広げる。
+  const fullChatHeight = Math.max(windowHeight * 0.27, windowHeight - insets.top - insets.bottom - 110);
+  const chatReveal = useAnimatedStyle(() => ({ height: interpolate(chatFocus.value, [0, 1], [windowHeight * 0.27, fullChatHeight]) }));
+  function closeChat() { chatFocus.value = withTiming(0, { duration: 240 }); }
+  function setChatScrolling(active: boolean) {
+    if (active) setMention(null);
+    chatFocus.value = withTiming(active ? 1 : 0, { duration: 240 });
+  }
+  function dismissInput() {
+    inputRef.current?.blur();
+    Keyboard.dismiss();
+    setMention(null);
+    closeChat();
+  }
   function setMapMoving(active: boolean) { mapMoving.value = withTiming(active ? 1 : 0, { duration: 150 }); }
   const map = useRef<MapView>(null);
   const currentArea = useRef(areaId);
@@ -88,15 +100,15 @@ export function MapScene({ onBack }: { onBack: () => void }) {
   return <View style={styles.scene}>
     <AreaMap ref={map} area={area} onMoving={setMapMoving} onMention={offerMention} onMapLongPress={mapLongPress} onMapPress={() => { setMention(null); Keyboard.dismiss(); }} onReady={() => { map.current?.setNativeProps({ showsBuildings: false }); }} />
     <Animated.View pointerEvents="none" style={[styles.readingBlur, { height: windowHeight * 0.45 + 100 }, restingBlur]}>
-  <MaskedView style={StyleSheet.absoluteFill} maskElement={<LinearGradient colors={['transparent', '#000000']} locations={[0, 1]} style={StyleSheet.absoluteFill} />}>
-    <BlurView intensity={70} tint="light" style={StyleSheet.absoluteFill} />
-  </MaskedView>
-  <LinearGradient
-    colors={['#FFFFFF00', '#FFFFFF5F']}
-    locations={[0, 1]}
-    style={StyleSheet.absoluteFill}
-  />
-</Animated.View>
+      <MaskedView style={StyleSheet.absoluteFill} maskElement={<LinearGradient colors={['transparent', '#000000']} locations={[0, 1]} style={StyleSheet.absoluteFill} />}>
+        <BlurView intensity={70} tint="light" style={StyleSheet.absoluteFill} />
+      </MaskedView>
+      <LinearGradient
+        colors={['#FFFFFF00', '#FFFFFF5F']}
+        locations={[0, 1]}
+        style={StyleSheet.absoluteFill}
+      />
+    </Animated.View>
     <LinearGradient pointerEvents="none" colors={['#EEEFE9AA', '#EEEFE966', '#EEEFE900']} locations={[0, 0.58, 1]} style={[styles.topVeil, { height: insets.top + 160 }]} />
     <Animated.View entering={FadeIn.duration(450)} style={[styles.header, { top: insets.top + 8 }]}>
       <Pressable accessibilityRole="button" accessibilityLabel="スキャナーに戻る" onPress={onBack} style={styles.headerButton}><SymbolView name="chevron.left" tintColor="#555753" size={26} weight="medium" /></Pressable>
@@ -106,19 +118,29 @@ export function MapScene({ onBack }: { onBack: () => void }) {
     {status === 'success' && <Animated.View pointerEvents="none" style={[styles.statusLine, { top: insets.top + 70 }, mutedStyle]}><Text style={styles.onlineText}>{ghost ? 'ゴースト' : 'オンライン'} {elapsed}</Text></Animated.View>}
     <Pressable accessibilityRole="button" accessibilityLabel="現在地に戻る（モック）" onPress={() => { setAreaId('kabukicho'); move(MOCK_LOCATION); }} style={[styles.locationButton, { position: 'absolute', right: 20, top: insets.top + 64 }]}><SymbolView name="location.fill" size={23} tintColor="#101010" /></Pressable>
     <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, focusStyle]}><BlurView intensity={65} tint="light" style={StyleSheet.absoluteFill} /></Animated.View>
-    {chatExpanded && <Pressable accessibilityLabel="チャットの拡大表示を閉じる" onPress={closeChat} style={StyleSheet.absoluteFill} />}
     {mention && <Pressable accessibilityLabel="メンションをキャンセル" onPress={() => setMention(null)} style={StyleSheet.absoluteFill} />}
+    {keyboardVisible && <Pressable accessibilityLabel="キーボードを閉じる" onPress={dismissInput} style={StyleSheet.absoluteFill} />}
     <Animated.View pointerEvents="box-none" style={[styles.bottom, bottomStyle]}>
-      <Animated.View pointerEvents="box-none" entering={FadeIn.delay(250).duration(500)} style={[styles.chat, chatHeight, chatOpacity]}><MapChat key={areaId} messages={messages} onScrolling={setChatScrolling} /></Animated.View>
+      <Animated.View pointerEvents={keyboardVisible ? 'none' : 'box-none'} entering={FadeIn.delay(250).duration(500)} style={[styles.chat, { height: fullChatHeight }, chatOpacity]}>
+        <Animated.View pointerEvents="box-none" style={[styles.chatClip, chatReveal]}>
+          <MaskedView pointerEvents="box-none" style={StyleSheet.absoluteFill} maskElement={<LinearGradient colors={['transparent', '#000000', '#000000']} locations={[0, 0.14, 1]} style={StyleSheet.absoluteFill} />}>
+            <View pointerEvents="box-none" style={[styles.chatContent, { height: fullChatHeight }]}>
+              <MapChat key={areaId} messages={messages} onScrolling={setChatScrolling} />
+            </View>
+          </MaskedView>
+        </Animated.View>
+      </Animated.View>
       {mention && <Animated.View entering={FadeInDown.duration(230)} exiting={FadeOutDown.duration(180)} style={styles.mentionPrompt}>
         <BlurView intensity={55} tint="light" style={StyleSheet.absoluteFill} />
         <Text style={styles.mentionUser}>@{mention.label}</Text>
         <Text style={styles.mentionText}>このユーザーにメンション付きでチャットしますか？</Text>
-        <Pressable accessibilityRole="button" onPress={insertMention} style={styles.mentionButton}><Text style={styles.mentionButtonText}>@付きチャット</Text></Pressable>
-        <Pressable accessibilityRole="button" onPress={() => setMention(null)} style={styles.mentionCancel}><Text style={styles.cancelText}>キャンセル</Text></Pressable>
+        <View style={{ flexDirection: 'row', gap: 12, alignItems: 'center', width: '100%' }}>
+          <Pressable accessibilityRole="button" onPress={insertMention} style={styles.mentionButton}><Text style={styles.mentionButtonText}>@付きチャット</Text></Pressable>
+          <Pressable accessibilityRole="button" onPress={() => setMention(null)} style={styles.mentionCancel}><Text style={styles.cancelText}>キャンセル</Text></Pressable>
+        </View>
       </Animated.View>}
       <Animated.View onTouchStart={() => setMention(null)} entering={FadeInDown.delay(180).duration(400)} style={[styles.composer, mutedStyle]}>
-        <TextInput onFocus={() => { setMention(null); closeChat(); }} ref={inputRef} accessibilityLabel="チャットメッセージ" placeholder="入力…" placeholderTextColor="#A5A5A5" value={draft} onChangeText={setDraft} onSubmitEditing={submit} returnKeyType="send" blurOnSubmit={false} style={styles.input} />
+        <TextInput onFocus={() => { setKeyboardVisible(true); setMention(null); closeChat(); }} ref={inputRef} accessibilityLabel="チャットメッセージ" placeholder="入力…" placeholderTextColor="#A5A5A5" value={draft} onChangeText={setDraft} onSubmitEditing={submit} returnKeyType="send" blurOnSubmit={false} style={styles.input} />
         {status === 'success' && <Pressable accessibilityRole="switch" accessibilityLabel="ゴーストモード" accessibilityState={{ checked: ghost }} onPress={() => setGhost(!ghost)} style={[styles.ghostButton, ghost && styles.ghostEnabled]}><GhostIcon /></Pressable>}
       </Animated.View>
     </Animated.View>
@@ -126,9 +148,14 @@ export function MapScene({ onBack }: { onBack: () => void }) {
 }
 // ASSUMED: 画像からの寸法近似。ネイティブ地図の道路・文字はApple Mapsの表示に従う。
 const styles = StyleSheet.create({
-  mentionPrompt: { overflow: 'hidden', backgroundColor: '#FFFFFF70', borderRadius: 32, borderCurve: 'continuous', padding: 14, marginBottom: 10, gap: 12, flexDirection: 'column', alignItems: 'center' }, mentionUser: { fontWeight: '700', fontSize: 18, color: '#0088FF' } , mentionText: { color: '#888888', fontSize: 16, lineHeight: 19 }, mentionButton: { backgroundColor: '#168EFF', paddingHorizontal: 16, paddingVertical: 12, borderRadius: 24, borderCurve: 'continuous', alignItems: 'center' }, mentionButtonText: { color: '#FFFFFF', fontWeight: '700' },
+  mentionPrompt: { overflow: 'hidden', backgroundColor: '#FFFFFF70', borderRadius: 32, borderCurve: 'continuous', padding: 14, marginBottom: 10, gap: 12, flexDirection: 'column', alignItems: 'center' },
+  mentionUser: { fontWeight: '700', fontSize: 18, color: '#0088FF' },
+  mentionText: { color: '#888888', fontSize: 16, lineHeight: 19 },
+  mentionButton: { flex: 1, backgroundColor: '#168EFF', paddingHorizontal: 16, paddingVertical: 12, borderRadius: 24, borderCurve: 'continuous', alignItems: 'center' }, mentionButtonText: { color: '#FFFFFF', fontWeight: '700' },
   areaPill: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: '#FFFFFF', borderRadius: 25, borderCurve: 'continuous', paddingHorizontal: 19, height: 46 }, areaTitle: { fontSize: 17, color: '#111111', fontWeight: '700', marginRight: 3 }, areaCount: { fontSize: 16, color: '#111111' }, statusLine: { position: 'absolute', left: 70, right: 70, alignItems: 'center' },
-  mentionCancel: { paddingVertical: 10, alignSelf: 'stretch', alignItems: 'center' }, cancelText: { color: '#666666', fontSize: 15 },
+  mentionCancel: { flex: 1, backgroundColor: '#ff164c', paddingHorizontal: 16, paddingVertical: 12, borderRadius: 24, borderCurve: 'continuous', alignItems: 'center' }, cancelText: { color: '#FFFFFF', fontWeight: '700' },
+  chatClip: { position: 'absolute', bottom: 0, left: 0, right: 0, overflow: 'hidden' },
+  chatContent: { position: 'absolute', bottom: 0, left: 0, right: 0 },
   readingBlur: { position: 'absolute', bottom: 0, left: 0, right: 0 },
   scene: { flex: 1, backgroundColor: '#E9EAE5' }, topVeil: { position: 'absolute', top: 0, left: 0, right: 0 },
   header: { position: 'absolute', left: 16, right: 16, height: 50, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }, headerButton: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }, brand: { alignItems: 'center' }, wordmark: { width: 128, height: 40, borderRadius: 4, borderCurve: 'continuous' }, exitPlaceholder: { width: 33, height: 33, borderRadius: 3, borderCurve: 'continuous' }, brandText: { color: '#000000', fontSize: 16, fontWeight: '900', marginTop: -3 },
