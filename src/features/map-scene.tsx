@@ -1,3 +1,4 @@
+import { AreaUsersSheet } from '@/features/area-users-sheet';
 import { GradientText } from '@/components/gradient-text';
 import { NumberText } from '@/components/number-text';
 import { RoundedText as Text } from '@/components/rounded-text';
@@ -30,6 +31,7 @@ export function MapScene({ onBack }: { onBack: () => void }) {
   const insets = useSafeAreaInsets();
   const [areaId, setAreaId] = useState<AreaId>('kabukicho');
   const [draft, setDraft] = useState('');
+  const [usersOpen, setUsersOpen] = useState(false);
   const [keyboardVisible, setKeyboardVisible] = useState(false);
   const [mention, setMention] = useState<MapPerson | null>(null);
   const mentionCamera = useRef<Camera | null>(null);
@@ -139,7 +141,7 @@ export function MapScene({ onBack }: { onBack: () => void }) {
     <LinearGradient pointerEvents="none" colors={['#EEEFE9AA', '#EEEFE966', '#EEEFE900']} locations={[0, 0.58, 1]} style={[styles.topVeil, { height: insets.top + 160 }]} />
     <Animated.View entering={FadeIn.duration(450)} style={[styles.header, { top: insets.top + 8 }]}>
       <Pressable accessibilityRole="button" accessibilityLabel="スキャナーに戻る" onPress={onBack} style={styles.headerButton}><SymbolView name="chevron.left" tintColor="#555753" size={26} weight="medium" /></Pressable>
-      <View style={styles.areaPill}><Text style={styles.areaTitle}>{area.name}</Text><SymbolView name="person.fill" size={16} tintColor="#111111" /><GradientText color="#111111" style={styles.areaCount}>{area.headcount}</GradientText></View>
+      <Pressable accessibilityRole="button" accessibilityLabel={`${area.name}のユーザー一覧`} onPress={() => { dismissInput(); setUsersOpen(true); }} style={({ pressed }) => [styles.areaPill, pressed && { opacity: 0.7 }]} ><Text style={styles.areaTitle}>{area.name}</Text><SymbolView name="person.fill" size={16} tintColor="#111111" /><GradientText color="#111111" style={styles.areaCount}>{area.headcount}</GradientText></Pressable>
       <View style={styles.headerButton}><ExitButton size={33} /></View>
     </Animated.View>
     {status === 'success' && <Animated.View entering={FadeIn.delay(120).duration(300)} pointerEvents="none" style={[styles.statusLine, { top: insets.top + 70 }, mutedStyle]}><NumberText color="#25B278" style={styles.onlineText}>{`${ghost ? 'ゴースト' : 'オンライン'} ${elapsed}`}</NumberText></Animated.View>}
@@ -171,6 +173,7 @@ export function MapScene({ onBack }: { onBack: () => void }) {
         {status === 'success' && <Pressable accessibilityRole="switch" accessibilityLabel="ゴーストモード" accessibilityState={{ checked: ghost }} onPress={() => setGhost(!ghost)} style={[styles.ghostButton, ghost && styles.ghostEnabled]}><GhostIcon /></Pressable>}
       </Animated.View>
     </Animated.View>
+    {usersOpen && <AreaUsersSheet area={area} onClose={() => setUsersOpen(false)} />}
   </View>;
 }
 // ASSUMED: 画像からの寸法近似。ネイティブ地図の道路・文字はApple Mapsの表示に従う。
