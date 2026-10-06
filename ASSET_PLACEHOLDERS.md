@@ -8,7 +8,6 @@
 
 | 素材 | 差し替え先 |
 | --- | --- |
-| 電信結界 / DreamCloudのヘッダーロゴ | `src/components/app-header.tsx` のwordmark |
 | ヘッダーのプロフィール写真 | `src/components/app-header.tsx` のavatar |
 
 マップ中央のブランドロゴは後の指示で廃止済み。SF Symbolsを使う戻る・現在地・システムログインアイコンの画像提供は不要。
@@ -34,3 +33,7 @@
 ## Exit icon update (2026-10-06)
 
 `assets/images/header/exit.png` is supplied and used by `src/components/exit-button.tsx` in both the header and map. It calls `useSession().logout()`; it is gray and disabled when logged out.
+
+## Header logo update (2026-10-06)
+
+`assets/images/header/telegraph-barrier-logo.svg` is supplied (original: `telegraph-berrier-logo.svg`) and displayed at 124 x 38 in `AppHeader` using expo-image. The map has no brand logo, per the revised design.

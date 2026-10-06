@@ -1,3 +1,4 @@
+import { Image } from 'expo-image';
 import { ExitButton } from '@/components/exit-button';
 import { StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -9,7 +10,7 @@ export function AppHeader() {
 
   return (
     <View style={[styles.header, { paddingTop: insets.top + 14 }]}>
-      <AssetPlaceholder style={styles.wordmark} />
+      <Image source={require('@/assets/images/header/telegraph-barrier-logo.svg')} contentFit="contain" accessibilityLabel="電信結界 DreamCloud" style={styles.wordmark} />
       <View style={styles.actions}>
         <ExitButton size={32} />
         <AssetPlaceholder style={styles.avatar} />
@@ -32,7 +33,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   wordmark: {
-    width: 126,
+    width: 124,
     height: 38,
     borderRadius: 2, borderCurve: 'continuous',
   },
