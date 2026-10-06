@@ -4,6 +4,7 @@ import type { Profile, SessionStatus } from '@/types';
 
 export type SessionValue = {
   status: SessionStatus;
+  isLoggingOut: boolean;
   profile: Profile | null;
   onlineSeconds: number;
   ghostSeconds: number;

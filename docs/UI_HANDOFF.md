@@ -160,3 +160,7 @@ Expo Goで `npx expo start` を起動し、以下を確認する。
 ## Logout update (2026-10-06)
 
 The exit icon is now supplied: `assets/images/header/exit.png`. `ExitButton` calls `useSession().logout()` from both screens. The mock provider clears profile, session, online time and ghost state immediately. The map stays open without its online status or ghost button. ProfileCard animates success to idle with a 460ms reverse flip; its display snapshot survives only until the flip completes. Scan readiness is independent of authentication. Replace the hook implementation for real logout; no network is called here.
+
+## Logout progress (2026-10-06)
+
+`useSession().isLoggingOut` controls the shared `LogoutProgress` modal in the root layout. The mock waits 900ms before clearing the session and closing the modal; this supersedes the immediate reset described above. Replace this delay with the real completion signal. Repeated requests are ignored and reset/unmount clears the pending timer.

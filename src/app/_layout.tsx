@@ -1,3 +1,4 @@
+import { LogoutProgress } from '@/components/logout-progress';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -15,6 +16,7 @@ export default function RootLayout() {
           <Stack screenOptions={{ headerShown: false }}>
             <Stack.Screen name="map" options={{ animation: 'fade', gestureEnabled: false }} />
           </Stack>
+          <LogoutProgress />
         </SessionProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>

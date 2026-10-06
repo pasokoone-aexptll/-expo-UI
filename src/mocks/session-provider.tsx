@@ -10,6 +10,8 @@ import { SessionContext } from '@/hooks/useSession';
 import type { Profile, SessionStatus } from '@/types';
 
 export function SessionProvider({ children }: PropsWithChildren) {
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const logoutTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [status, setStatus] = useState<SessionStatus>('idle');
   const [profile, setProfile] = useState<Profile | null>(null);
   const [onlineSeconds, setOnlineSeconds] = useState(0);
@@ -44,6 +46,7 @@ export function SessionProvider({ children }: PropsWithChildren) {
   useEffect(
     () => () => {
       if (loginTimer.current) clearTimeout(loginTimer.current);
+      if (logoutTimer.current) clearTimeout(logoutTimer.current);
     },
     [],
   );
@@ -62,6 +65,9 @@ export function SessionProvider({ children }: PropsWithChildren) {
   }
 
   function reset() {
+    if (logoutTimer.current) clearTimeout(logoutTimer.current);
+    logoutTimer.current = null;
+    setIsLoggingOut(false);
     if (loginTimer.current) clearTimeout(loginTimer.current);
     loginTimer.current = null;
     onlineStart.current = null;
@@ -74,12 +80,15 @@ export function SessionProvider({ children }: PropsWithChildren) {
   }
 
   function logout() {
-    if (status === 'success') reset();
+    if (status !== 'success' || logoutTimer.current) return;
+    setIsLoggingOut(true);
+    // ASSUMED: モックのログアウト処理は900ms。本実装では通信の完了に合わせる。
+    logoutTimer.current = setTimeout(reset, 900);
   }
 
   return (
     <SessionContext.Provider
-      value={{ status, profile, onlineSeconds, ghostSeconds, ghost, setGhost, simulateLogin, logout, reset }}
+      value={{ status, isLoggingOut, profile, onlineSeconds, ghostSeconds, ghost, setGhost, simulateLogin, logout, reset }}
     >
       {children}
     </SessionContext.Provider>
